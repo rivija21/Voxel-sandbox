@@ -1,0 +1,9 @@
+# Build output
+*.exe
+*.o
+
+# Player data (created next to the .exe)
+world.dat
+world.dat.tmp
+world-backup.dat
+screenshots/

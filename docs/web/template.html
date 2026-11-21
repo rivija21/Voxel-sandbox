@@ -1,0 +1,461 @@
+<title>Voxel Sandbox Study Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;600&family=Pixelify+Sans:wght@500;700&display=swap">
+<style>
+/* Layout: a sticky chapter rail on the left whose icons are the game's own block textures,
+   one ~72ch reading column; the rail becomes a drawer below 900px. Square corners everywhere, like blocks. */
+:root {
+  --bg: #F3F5F0;        /* pale stone */
+  --panel: #E7EBE3;
+  --code-bg: #EAEEE6;
+  --ink: #1B211D;
+  --muted: #57615A;
+  --rule: #CBD2C7;
+  --accent: #3B7421;    /* grass */
+  --accent-ink: #2E5C19;
+  --dirt: #7B4A2A;      /* inline code */
+  --water: #2C5CB0;
+  --callout: #E1E9F4;
+  --syn-kw: #A13D2B; --syn-str: #3B7421; --syn-num: #2C5CB0; --syn-com: #79837B; --syn-type: #8A5A2B; --syn-fn: #1E6378;
+  --font-display: "Pixelify Sans", "Courier New", monospace;
+  --font-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", Consolas, "Cascadia Mono", ui-monospace, monospace;
+  --measure: 72ch;
+  --rail: 272px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121613; --panel: #1A201C; --code-bg: #0D110E; --ink: #E2E8E0; --muted: #98A39A; --rule: #2C342E;
+    --accent: #8CC45F; --accent-ink: #A9DA84; --dirt: #D9A577; --water: #86AEF2; --callout: #172130;
+    --syn-kw: #EE8E77; --syn-str: #9CCB72; --syn-num: #8DB4F5; --syn-com: #7B877E; --syn-type: #D8AA7E; --syn-fn: #6FC0D3;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121613; --panel: #1A201C; --code-bg: #0D110E; --ink: #E2E8E0; --muted: #98A39A; --rule: #2C342E;
+  --accent: #8CC45F; --accent-ink: #A9DA84; --dirt: #D9A577; --water: #86AEF2; --callout: #172130;
+  --syn-kw: #EE8E77; --syn-str: #9CCB72; --syn-num: #8DB4F5; --syn-com: #7B877E; --syn-type: #D8AA7E; --syn-fn: #6FC0D3;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-padding-top: 1.25rem; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font: 17px/1.65 var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--accent-ink); text-underline-offset: 0.18em; text-decoration-thickness: 1px; }
+a:hover { text-decoration-thickness: 2px; }
+:focus-visible { outline: 2px solid var(--water); outline-offset: 2px; }
+img.tile { image-rendering: pixelated; image-rendering: crisp-edges; display: block; flex: none; }
+
+.layout { display: grid; grid-template-columns: var(--rail) minmax(0, 1fr); min-height: 100vh; }
+
+/* ---------- chapter rail ---------- */
+.rail {
+  position: sticky; top: 0; align-self: start;
+  height: 100vh; overflow-y: auto;
+  background: var(--panel);
+  border-right: 1px solid var(--rule);
+  padding: 1.25rem 0.9rem 2rem;
+  display: flex; flex-direction: column; gap: 1rem;
+  font-size: 0.9rem;
+}
+.brand { display: flex; align-items: center; gap: 0.6rem; text-decoration: none; color: var(--ink); padding-inline: 0.35rem; }
+.brand b { font: 700 1.2rem/1.1 var(--font-display); letter-spacing: 0.02em; display: block; }
+.brand small { color: var(--muted); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; }
+.find { display: flex; flex-direction: column; gap: 0.35rem; position: relative; }
+.find label { font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); padding-inline: 0.35rem; }
+.find input {
+  width: 100%; font: inherit; color: var(--ink); background: var(--bg);
+  border: 1px solid var(--rule); border-radius: 0; padding: 0.45rem 0.6rem;
+}
+.results { list-style: none; margin: 0; padding: 0; border: 1px solid var(--rule); background: var(--bg); }
+.results a { display: block; padding: 0.4rem 0.6rem; text-decoration: none; color: var(--ink); border-bottom: 1px solid var(--rule); }
+.results li:last-child a { border-bottom: 0; }
+.results a span { display: block; color: var(--muted); font-size: 0.75rem; }
+.results a:hover, .results a:focus-visible { background: var(--panel); }
+.results .none { padding: 0.5rem 0.6rem; color: var(--muted); }
+.toc, .toc ol { list-style: none; margin: 0; padding: 0; }
+.toc > li > a {
+  display: grid; grid-template-columns: 22px 1.7rem minmax(0, 1fr); align-items: center; gap: 0.45rem;
+  padding: 0.38rem 0.35rem; text-decoration: none; color: var(--ink);
+}
+.toc .n { font: 500 0.85rem var(--font-display); color: var(--muted); font-variant-numeric: tabular-nums; }
+.toc > li > a:hover { background: var(--bg); }
+.toc > li.active > a { background: var(--bg); font-weight: 700; box-shadow: inset 0 0 0 1px var(--rule); }
+.toc > li.active > a .n { color: var(--accent-ink); }
+.toc ol { display: none; padding: 0.15rem 0 0.4rem calc(22px + 1.7rem + 1.25rem); }
+.toc > li.active ol { display: block; }
+.toc ol a { display: block; padding: 0.18rem 0.3rem; color: var(--muted); text-decoration: none; font-size: 0.82rem; line-height: 1.35; }
+.toc ol a:hover { color: var(--ink); }
+.toc ol a.current { color: var(--accent-ink); font-weight: 700; }
+.rail-foot { margin-top: auto; color: var(--muted); font-size: 0.75rem; padding-inline: 0.35rem; line-height: 1.45; }
+
+/* ---------- top bar (narrow screens) ---------- */
+.topbar { display: none; }
+
+/* ---------- main column ---------- */
+main { min-width: 0; padding-inline: clamp(16px, 5vw, 4.5rem); padding-block: 2.5rem 6rem; }
+.column { max-width: var(--measure); }
+
+.hero { display: flex; flex-direction: column; gap: 1.4rem; padding-bottom: 2.5rem; border-bottom: 2px solid var(--ink); }
+.eyebrow { font: 500 0.95rem var(--font-display); color: var(--accent-ink); letter-spacing: 0.06em; margin: 0; }
+.wordmark { font: 700 clamp(2.6rem, 6vw, 4rem)/1 var(--font-display); margin: 0; letter-spacing: 0.01em; text-wrap: balance; }
+.lede { font-size: 1.2rem; line-height: 1.55; margin: 0; max-width: 60ch; text-wrap: pretty; }
+.facts { display: flex; flex-wrap: wrap; gap: 0.5rem 2rem; margin: 0; }
+.facts div { display: flex; flex-direction: column; }
+.facts dt { font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.facts dd { margin: 0; font: 600 1.05rem var(--font-mono); font-variant-numeric: tabular-nums; }
+.shots { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem 0.6rem; margin: 0; max-width: 100%; }
+.shots figure { margin: 0; display: flex; flex-direction: column; gap: 0.3rem; min-width: 0; }
+.shots figure:first-child { grid-column: span 2; }
+.shots img { width: 100%; max-width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; border: 1px solid var(--rule); display: block; }
+.shots figcaption { font-size: 0.8rem; color: var(--muted); }
+.palette { display: flex; flex-direction: column; gap: 0.5rem; }
+.palette p { margin: 0; font-size: 0.85rem; color: var(--muted); }
+.palette ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.palette li { display: flex; flex-direction: column; align-items: center; gap: 0.2rem; width: 3.6rem; }
+.palette img { width: 32px; height: 32px; outline: 1px solid var(--rule); }
+.palette span { font: 400 0.68rem var(--font-mono); color: var(--muted); text-align: center; }
+
+/* ---------- chapters ---------- */
+.chapter { padding-top: 4.5rem; }
+.chapter-head { display: flex; align-items: center; gap: 1rem; padding-bottom: 1.1rem; border-bottom: 1px solid var(--rule); margin-bottom: 1.6rem; }
+.chapter-head img { width: 48px; height: 48px; outline: 1px solid var(--rule); }
+.chapter-head p { margin: 0; font: 500 0.95rem var(--font-display); color: var(--accent-ink); letter-spacing: 0.06em; }
+.chapter-head h1 { margin: 0.1rem 0 0; font-size: clamp(1.7rem, 3.4vw, 2.2rem); line-height: 1.15; text-wrap: balance; }
+.chapter-head h1 code { font-size: 0.55em; vertical-align: middle; }
+
+.prose > * + * { margin-top: 1em; }
+.prose > * { margin-bottom: 0; }
+.prose h2 { font-size: 1.45rem; line-height: 1.25; margin-top: 2.6rem; text-wrap: balance; }
+.prose h3 { font-size: 1.13rem; line-height: 1.3; margin-top: 2rem; }
+.prose h2 + *, .prose h3 + * { margin-top: 0.6em; }
+.prose hr { border: 0; border-top: 1px solid var(--rule); margin-block: 2.2rem; }
+.prose ul, .prose ol { padding-left: 1.4rem; }
+.prose li + li { margin-top: 0.3em; }
+.prose li > p { margin: 0; }
+.prose strong { font-weight: 700; }
+.prose code {
+  font-family: var(--font-mono); font-size: 0.86em; color: var(--dirt);
+  background: var(--panel); padding: 0.08em 0.32em; overflow-wrap: anywhere;
+}
+.prose a code { color: inherit; }
+.prose blockquote {
+  margin: 0; padding: 0.9rem 1.1rem; background: var(--callout);
+  border: 1px solid var(--rule); border-left: 4px solid var(--water);
+}
+.prose blockquote > * + * { margin-top: 0.6em; }
+.prose blockquote p { margin: 0; }
+
+.code-wrap { position: relative; }
+.prose pre {
+  margin: 0; background: var(--code-bg); border: 1px solid var(--rule);
+  padding: 0.95rem 1.1rem; overflow-x: auto; font-size: 0.84rem; line-height: 1.5; tab-size: 4;
+}
+.prose pre code { background: none; padding: 0; color: var(--ink); font-size: inherit; overflow-wrap: normal; white-space: pre; }
+.copy {
+  position: absolute; top: 0.45rem; right: 0.45rem;
+  font: 600 0.7rem var(--font-mono); letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--muted); background: var(--bg); border: 1px solid var(--rule); border-radius: 0;
+  padding: 0.22rem 0.5rem; cursor: pointer; opacity: 0.85;
+}
+.copy:hover { color: var(--ink); opacity: 1; }
+
+.table-wrap { overflow-x: auto; border-top: 2px solid var(--ink); }
+.prose table { border-collapse: collapse; width: 100%; font-size: 0.9rem; line-height: 1.5; }
+.prose th { text-align: left; font-size: 0.74rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); padding: 0.55rem 0.7rem; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+.prose td { padding: 0.5rem 0.7rem; border-bottom: 1px solid var(--rule); vertical-align: top; }
+.prose td code { font-size: 0.82em; }
+
+.next { display: flex; justify-content: flex-end; margin-top: 3rem; }
+.next a {
+  display: inline-flex; align-items: center; gap: 0.7rem; padding: 0.7rem 1rem;
+  border: 1px solid var(--rule); background: var(--panel); text-decoration: none; color: var(--ink);
+}
+.next a:hover { border-color: var(--accent); }
+.next small { display: block; font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.next img { width: 28px; height: 28px; }
+
+/* syntax colours (highlight.js classes) */
+.hljs-keyword, .hljs-meta .hljs-keyword, .hljs-selector-tag { color: var(--syn-kw); }
+.hljs-string, .hljs-meta .hljs-string { color: var(--syn-str); }
+.hljs-number, .hljs-literal { color: var(--syn-num); }
+.hljs-comment { color: var(--syn-com); font-style: italic; }
+.hljs-type, .hljs-built_in, .hljs-class .hljs-title { color: var(--syn-type); }
+.hljs-title, .hljs-title.function_, .hljs-function .hljs-title { color: var(--syn-fn); }
+.hljs-meta { color: var(--syn-type); }
+.hljs-variable, .hljs-attr, .hljs-params { color: var(--ink); }
+
+/* ---------- narrow screens: rail becomes a drawer ---------- */
+@media (max-width: 900px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+    position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+    background: var(--panel); border-bottom: 1px solid var(--rule);
+    padding: 0.55rem 16px;
+  }
+  .topbar .brand b { font-size: 1.05rem; }
+  .topbar button {
+    font: 600 0.85rem var(--font-body); color: var(--ink); background: var(--bg);
+    border: 1px solid var(--rule); border-radius: 0; padding: 0.4rem 0.8rem; cursor: pointer;
+  }
+  .rail {
+    position: fixed; z-index: 30; left: 0; top: 0; bottom: 0; width: min(86vw, 320px); height: auto;
+    padding-top: calc(1.25rem + env(safe-area-inset-top, 0px));
+    padding-bottom: calc(2rem + env(safe-area-inset-bottom, 0px));
+    transform: translateX(-102%); visibility: hidden;
+    box-shadow: 0 0 0 100vmax transparent;
+  }
+  body.nav-open .rail { transform: none; visibility: visible; box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.35); }
+  @media (prefers-reduced-motion: no-preference) { .rail { transition: transform 0.18s ease, visibility 0.18s; } }
+  html { scroll-padding-top: 4rem; }
+  main { padding-block: 1.75rem 5rem; }
+  body { font-size: 16px; }
+}
+</style>
+
+<div class="topbar">
+  <a class="brand" href="#top"><img class="tile" data-tex="GrassSide" width="24" height="24" alt=""><b>Voxel Sandbox</b></a>
+  <button type="button" id="menu" aria-expanded="false" aria-controls="rail">Chapters</button>
+</div>
+
+<div class="layout">
+  <nav class="rail" id="rail" aria-label="Chapters">
+    <a class="brand" href="#top"><img class="tile" data-tex="GrassSide" width="32" height="32" alt="">
+      <span><b>Voxel Sandbox</b><small>Study guide</small></span></a>
+    <div class="find">
+      <label for="find-input">Find a topic</label>
+      <input id="find-input" type="search" placeholder="e.g. raycast, VAO, unique_ptr" autocomplete="off">
+      <ul class="results" id="results" hidden></ul>
+    </div>
+    <ol class="toc" id="toc"></ol>
+    <p class="rail-foot">The same text as <code>README.md</code> and <code>docs/</code> in the project folder. Icons are the game's own block textures.</p>
+  </nav>
+
+  <main id="main">
+    <div class="column">
+      <header class="hero" id="top">
+        <p class="eyebrow">Study guide</p>
+        <h1 class="wordmark">Voxel Sandbox</h1>
+        <p class="lede">A Minecraft-style block world written from scratch in C++17. The program opens its own Win32 window, draws with OpenGL 3.3 shaders, generates an endless landscape from a seed, and saves your building. It uses no game engine and no libraries.</p>
+        <dl class="facts">
+          <div><dt>C++</dt><dd>3,400 lines</dd></div>
+          <div><dt>Source files</dt><dd>17</dd></div>
+          <div><dt>Chapters</dt><dd>11</dd></div>
+          <div><dt>Compiler</dt><dd>g++ 15.2</dd></div>
+          <div><dt>Graphics</dt><dd>OpenGL 3.3 core</dd></div>
+        </dl>
+        <div class="shots">
+          <figure><img src="img/spawn.png" width="800" height="450" alt="First-person view: grassy terraces, oak trees, a sand patch and the block hotbar at the bottom"><figcaption>Spawn, seed 12345</figcaption></figure>
+          <figure><img src="img/mountain.png" width="800" height="450" alt="A terraced green mountain with snowy peaks fading into distance fog"><figcaption>Snowy peaks, seed 2026</figcaption></figure>
+          <figure><img src="img/underwater.png" width="800" height="450" alt="Underwater view: blue fog, a sandy sea floor, the water surface overhead"><figcaption>Under the sea, seed 2026</figcaption></figure>
+        </div>
+        <div class="palette">
+          <p>All 15 block textures, 16 &times; 16 pixels each, painted by <code>textures.cpp</code> every time the game starts:</p>
+          <ul id="palette"></ul>
+        </div>
+      </header>
+
+      <div id="chapters"></div>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/glsl.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/powershell.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/dos.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/makefile.min.js"></script>
+<script>
+const TEX = __TEX_JSON__;
+const CHAPTERS = __CHAPTERS_JSON__;
+
+(function () {
+  const $ = (sel, root = document) => root.querySelector(sel);
+  const el = (tag, props = {}, kids = []) => {
+    const n = Object.assign(document.createElement(tag), props);
+    for (const k of kids) n.append(k);
+    return n;
+  };
+  const tile = (name, size) => el('img', { className: 'tile', src: TEX[name].src, width: size, height: size, alt: '' });
+
+  // Brand icons and the texture palette.
+  document.querySelectorAll('img[data-tex]').forEach(img => { img.src = TEX[img.dataset.tex].src; });
+  const palette = $('#palette');
+  for (const name of Object.keys(TEX)) {
+    const li = el('li', { title: TEX[name].label }, [tile(name, 32), el('span', { textContent: TEX[name].label })]);
+    palette.append(li);
+  }
+
+  const slug = s => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 50) || 'section';
+  const render = md => (window.marked ? marked.parse(md, { gfm: true }) : null);
+  const inline = md => (window.marked ? marked.parseInline(md) : md.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c])));
+
+  const container = $('#chapters');
+  const toc = $('#toc');
+  const index = [];  // for the topic finder
+
+  CHAPTERS.forEach((ch, i) => {
+    const section = el('section', { className: 'chapter', id: ch.id });
+    const head = el('header', { className: 'chapter-head' });
+    head.append(tile(ch.tex, 48));
+    const text = el('div');
+    text.append(el('p', { textContent: ch.num ? 'Chapter ' + ch.num : 'README' }));
+    const h1 = el('h1');
+    h1.innerHTML = inline(ch.title);
+    text.append(h1);
+    head.append(text);
+    section.append(head);
+
+    const prose = el('div', { className: 'prose' });
+    const html = render(ch.md);
+    if (html === null) prose.append(el('pre', { textContent: ch.md }));  // library failed to load: still readable
+    else prose.innerHTML = html;
+    section.append(prose);
+
+    // Links between chapters: "05-opengl-pipeline.md" -> "#ch05".
+    prose.querySelectorAll('a[href]').forEach(a => {
+      const href = a.getAttribute('href');
+      const m = href.match(/(?:^|\/)(\d\d)-[\w-]+\.md(?:#.*)?$/);
+      if (m) a.setAttribute('href', '#ch' + m[1]);
+      else if (/README\.md$/.test(href)) a.setAttribute('href', '#start');
+      else if (/^https?:/.test(href)) { a.target = '_blank'; a.rel = 'noopener'; }
+    });
+
+    // Headings get ids; h2s go into the rail.
+    const sub = el('ol');
+    const used = new Set();
+    prose.querySelectorAll('h2, h3').forEach(h => {
+      let id = ch.id + '-' + slug(h.textContent);
+      while (used.has(id)) id += '-x';
+      used.add(id);
+      h.id = id;
+      index.push({ text: h.textContent, href: '#' + id, where: ch.num ? ch.num + ' ' + ch.short : ch.short });
+      if (h.tagName === 'H2') sub.append(el('li', {}, [el('a', { href: '#' + id, textContent: h.textContent.replace(/^\d+\.\s*/, '') })]));
+    });
+
+    // Glossary rows are findable too.
+    if (ch.id === 'ch11') {
+      prose.querySelectorAll('tbody tr').forEach(tr => {
+        const term = tr.cells[0].textContent.trim();
+        tr.id = 'ch11-' + slug(term);
+        index.push({ text: term, href: '#' + tr.id, where: 'Glossary' });
+      });
+    }
+
+    // Tables scroll sideways inside their own box on narrow screens.
+    prose.querySelectorAll('table').forEach(t => {
+      const wrap = el('div', { className: 'table-wrap' });
+      t.replaceWith(wrap);
+      wrap.append(t);
+    });
+
+    // Code: highlight known languages, add a copy button.
+    prose.querySelectorAll('pre > code').forEach(code => {
+      const lang = (code.className.match(/language-([\w-]+)/) || [])[1];
+      if (lang && window.hljs && hljs.getLanguage(lang)) hljs.highlightElement(code);
+      const pre = code.parentElement;
+      const wrap = el('div', { className: 'code-wrap' });
+      pre.replaceWith(wrap);
+      const btn = el('button', { type: 'button', className: 'copy', textContent: 'Copy' });
+      btn.setAttribute('aria-label', 'Copy this code');
+      btn.addEventListener('click', async () => {
+        const done = label => { btn.textContent = label; setTimeout(() => (btn.textContent = 'Copy'), 1600); };
+        try {
+          await navigator.clipboard.writeText(code.innerText);
+          done('Copied');
+        } catch (e) {
+          const range = document.createRange();
+          range.selectNodeContents(code);
+          const s = getSelection(); s.removeAllRanges(); s.addRange(range);
+          done('Ctrl+C');
+        }
+      });
+      wrap.append(btn, pre);
+    });
+
+    prose.querySelectorAll('blockquote').forEach(b => b.classList.add('callout'));
+
+    const next = CHAPTERS[i + 1];
+    if (next) {
+      const a = el('a', { href: '#' + next.id }, [tile(next.tex, 28)]);
+      const label = el('span');
+      label.append(el('small', { textContent: 'Next' }));
+      label.append(document.createTextNode((next.num ? next.num + ' · ' : '') + next.short));
+      a.append(label);
+      section.append(el('div', { className: 'next' }, [a]));
+    }
+    container.append(section);
+
+    const li = el('li');
+    li.dataset.ch = ch.id;
+    const link = el('a', { href: '#' + ch.id }, [tile(ch.tex, 22), el('span', { className: 'n', textContent: ch.num || '··' }), el('span', { textContent: ch.short })]);
+    li.append(link, sub);
+    toc.append(li);
+  });
+
+  // ---- Topic finder ----
+  const input = $('#find-input');
+  const results = $('#results');
+  input.addEventListener('input', () => {
+    const q = input.value.trim().toLowerCase();
+    results.replaceChildren();
+    if (q.length < 2) { results.hidden = true; return; }
+    const hits = index.filter(e => e.text.toLowerCase().includes(q)).slice(0, 12);
+    if (!hits.length) results.append(el('li', { className: 'none', textContent: 'No heading or glossary term matches. Try Ctrl+F for the full text.' }));
+    for (const h of hits) {
+      const a = el('a', { href: h.href }, [document.createTextNode(h.text), el('span', { textContent: h.where })]);
+      results.append(el('li', {}, [a]));
+    }
+    results.hidden = false;
+  });
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { const first = results.querySelector('a'); if (first) { first.click(); } }
+    if (e.key === 'Escape') { input.value = ''; results.hidden = true; }
+  });
+  results.addEventListener('click', e => { if (e.target.closest('a')) closeNav(); });
+
+  // ---- Drawer on narrow screens ----
+  const menu = $('#menu');
+  const closeNav = () => { document.body.classList.remove('nav-open'); menu.setAttribute('aria-expanded', 'false'); };
+  menu.addEventListener('click', () => {
+    const open = document.body.classList.toggle('nav-open');
+    menu.setAttribute('aria-expanded', String(open));
+  });
+  toc.addEventListener('click', e => { if (e.target.closest('a')) closeNav(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeNav(); });
+  document.addEventListener('click', e => {
+    if (document.body.classList.contains('nav-open') && !e.target.closest('#rail') && !e.target.closest('#menu')) closeNav();
+  });
+
+  // ---- Highlight where you are ----
+  const sections = [...document.querySelectorAll('.chapter')];
+  let ticking = false;
+  const spy = () => {
+    ticking = false;
+    const line = 140;
+    let current = sections[0];
+    for (const s of sections) if (s.getBoundingClientRect().top <= line) current = s;
+    toc.querySelectorAll(':scope > li').forEach(li => li.classList.toggle('active', li.dataset.ch === current.id));
+    let currentH = null;
+    current.querySelectorAll('h2').forEach(h => { if (h.getBoundingClientRect().top <= line) currentH = h; });
+    toc.querySelectorAll('ol a').forEach(a => a.classList.toggle('current', currentH !== null && a.getAttribute('href') === '#' + currentH.id));
+  };
+  addEventListener('scroll', () => { if (!ticking) { ticking = true; requestAnimationFrame(spy); } }, { passive: true });
+  spy();
+
+  // Content is built after load, so jump to a #chapter link ourselves.
+  if (location.hash.length > 1) {
+    const target = document.getElementById(location.hash.slice(1));
+    if (target) target.scrollIntoView();
+  }
+})();
+</script>

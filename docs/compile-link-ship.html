@@ -1,0 +1,1435 @@
+<title>Compile, Link, Ship</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@600;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: engineering-manual — sticky module index on the left, a single reading column on the right. */
+:root {
+  --paper: #F4F5F1;
+  --panel: #FFFFFF;
+  --ink: #1A1E23;
+  --muted: #59626E;
+  --rule: #D9DCD3;
+  --accent: #2346B0;
+  --accent-soft: #E5EAF8;
+  --warn: #9C4C08;
+  --warn-soft: #FAEEDF;
+  --ok: #1D7446;
+  --ok-soft: #E2F2E8;
+  --code-bg: #EBEDE6;
+  --code-ink: #1F2430;
+  --hl-kw: #2346B0;
+  --hl-str: #1D7446;
+  --hl-com: #737B87;
+  --hl-num: #9C4C08;
+  --hl-type: #8A2C68;
+  --hl-meta: #6F5300;
+  --font-display: "IBM Plex Sans Condensed", "Arial Narrow", "Segoe UI", sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Mono", Consolas, "SF Mono", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #111418; --panel: #171B21; --ink: #E4E7EB; --muted: #98A1AD; --rule: #282E37;
+    --accent: #8EA7FF; --accent-soft: #1C2440; --warn: #F0A25C; --warn-soft: #2D2117;
+    --ok: #63CC92; --ok-soft: #132A1E; --code-bg: #0C0F13; --code-ink: #D9DEE5;
+    --hl-kw: #8EA7FF; --hl-str: #80D5A2; --hl-com: #6D7684; --hl-num: #F0A25C; --hl-type: #E59BCA; --hl-meta: #D8B95E;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #111418; --panel: #171B21; --ink: #E4E7EB; --muted: #98A1AD; --rule: #282E37;
+  --accent: #8EA7FF; --accent-soft: #1C2440; --warn: #F0A25C; --warn-soft: #2D2117;
+  --ok: #63CC92; --ok-soft: #132A1E; --code-bg: #0C0F13; --code-ink: #D9DEE5;
+  --hl-kw: #8EA7FF; --hl-str: #80D5A2; --hl-com: #6D7684; --hl-num: #F0A25C; --hl-type: #E59BCA; --hl-meta: #D8B95E;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 16px/1.65 var(--font-body);
+  padding-inline: 20px;
+  padding-block: 0 64px;
+}
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible, button:focus-visible, input:focus-visible, summary:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px;
+}
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; line-height: 1.15; }
+h2 { font-size: 2rem; margin: 0 0 .4rem; letter-spacing: -.01em; }
+h3 { font-size: 1.25rem; margin: 2.2rem 0 .5rem; }
+p, li { max-width: 68ch; }
+code { font-family: var(--font-mono); font-size: .88em; background: var(--code-bg); color: var(--code-ink); padding: .1em .35em; border-radius: 4px; }
+kbd { font-family: var(--font-mono); font-size: .82em; border: 1px solid var(--rule); border-bottom-width: 2px; border-radius: 4px; padding: 0 .35em; background: var(--panel); }
+
+/* ---------- Header ---------- */
+.masthead { max-width: 1180px; margin: 0 auto; padding-block: 56px 36px; border-bottom: 1px solid var(--rule); }
+.eyebrow { font: 600 .75rem/1 var(--font-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.masthead h1 { font-size: clamp(2.6rem, 6vw, 4.4rem); margin: .6rem 0 .8rem; letter-spacing: -.02em; }
+.masthead .lede { font-size: 1.15rem; color: var(--muted); max-width: 62ch; margin: 0; }
+.pipeline {
+  margin-top: 32px; display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px;
+  font-family: var(--font-mono); font-size: .82rem;
+}
+.pipeline .file {
+  background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 8px 12px;
+  display: flex; flex-direction: column; gap: 2px; min-width: 0;
+}
+.pipeline .file b { font-weight: 600; }
+.pipeline .file span, .pipeline .tool span { color: var(--muted); font-size: .72rem; }
+.pipeline .tool {
+  display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 0 4px;
+  color: var(--accent); font-weight: 600;
+}
+.pipeline .tool::before { content: "→"; font-size: 1.1rem; line-height: 1; }
+.pipeline .file.final { border-color: var(--accent); background: var(--accent-soft); }
+
+/* ---------- Page grid ---------- */
+.page { max-width: 1180px; margin: 0 auto; display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 56px; padding-top: 36px; }
+aside.index { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 20px); align-self: start; max-height: calc(100vh - 40px); overflow: auto; }
+.progress { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 14px; margin-bottom: 18px; }
+.progress .count { font: 600 .9rem var(--font-body); font-variant-numeric: tabular-nums; }
+.bar { height: 6px; background: var(--code-bg); border-radius: 3px; margin-top: 8px; overflow: hidden; }
+.bar i { display: block; height: 100%; width: 0; background: var(--ok); border-radius: 3px; transition: width .3s; }
+.index ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: none; }
+.index a {
+  display: grid; grid-template-columns: 2.2em 1fr; align-items: baseline; text-decoration: none;
+  color: var(--muted); font-size: .9rem; padding: 5px 8px; border-radius: 6px; line-height: 1.35;
+}
+.index a .n { font: 600 .75rem var(--font-mono); font-variant-numeric: tabular-nums; }
+.index a:hover { background: var(--panel); color: var(--ink); }
+.index a.active { color: var(--accent); background: var(--accent-soft); }
+.index a.done .n::after { content: " ✓"; color: var(--ok); }
+.index .theme { margin-top: 18px; display: flex; gap: 6px; font-size: .8rem; }
+.index .theme button {
+  flex: 1; font: 500 .8rem var(--font-body); background: transparent; color: var(--muted);
+  border: 1px solid var(--rule); border-radius: 6px; padding: 5px 0; cursor: pointer;
+}
+.index .theme button[aria-pressed="true"] { background: var(--panel); color: var(--ink); }
+
+main { min-width: 0; max-width: 780px; }
+section.module { padding-block: 8px 48px; border-bottom: 1px solid var(--rule); margin-bottom: 40px; scroll-margin-top: 24px; }
+section.module:last-of-type { border-bottom: 0; }
+.module-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; margin-bottom: 4px; }
+.module-head .num { font: 600 .8rem var(--font-mono); color: var(--accent); letter-spacing: .08em; }
+.module-head .time { font: 400 .8rem var(--font-mono); color: var(--muted); }
+.goals { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 14px 18px; margin: 18px 0 8px; }
+.goals .label, .callout .label, .try .label { font: 600 .72rem var(--font-mono); letter-spacing: .1em; text-transform: uppercase; }
+.goals ul { margin: 6px 0 0; padding-left: 1.2em; }
+.goals li { margin: 2px 0; }
+
+/* ---------- Code ---------- */
+.code { position: relative; margin: 14px 0 18px; }
+.code .lang {
+  position: absolute; top: 0; left: 14px; transform: translateY(-50%);
+  font: 600 .68rem var(--font-mono); letter-spacing: .08em; text-transform: uppercase;
+  background: var(--paper); color: var(--muted); padding: 0 6px; border-radius: 3px;
+}
+pre {
+  margin: 0; background: var(--code-bg); color: var(--code-ink); border-radius: 8px;
+  padding: 18px 16px 14px; overflow-x: auto; font: 400 .84rem/1.6 var(--font-mono); tab-size: 4;
+}
+pre code { background: none; padding: 0; font-size: inherit; color: inherit; }
+.copy {
+  position: absolute; top: 8px; right: 8px; font: 500 .72rem var(--font-body);
+  background: var(--panel); color: var(--muted); border: 1px solid var(--rule); border-radius: 5px;
+  padding: 3px 9px; cursor: pointer; opacity: .85;
+}
+.copy:hover { opacity: 1; color: var(--ink); }
+.hljs-keyword, .hljs-built_in.hljs-keyword, .hljs-selector-tag { color: var(--hl-kw); font-weight: 600; }
+.hljs-string, .hljs-char.escape_ { color: var(--hl-str); }
+.hljs-comment, .hljs-quote { color: var(--hl-com); font-style: italic; }
+.hljs-number, .hljs-literal { color: var(--hl-num); }
+.hljs-type, .hljs-built_in, .hljs-class .hljs-title, .hljs-title.class_ { color: var(--hl-type); }
+.hljs-meta, .hljs-meta .hljs-keyword { color: var(--hl-meta); font-weight: 400; }
+.hljs-meta .hljs-string { color: var(--hl-str); }
+.hljs-title.function_, .hljs-title { font-weight: 600; }
+.hljs-variable, .hljs-attr, .hljs-params { color: inherit; }
+
+/* ---------- Callouts ---------- */
+.callout { border-radius: 8px; padding: 12px 16px; margin: 18px 0; background: var(--accent-soft); }
+.callout.warn { background: var(--warn-soft); }
+.callout.warn .label { color: var(--warn); }
+.callout .label { color: var(--accent); }
+.callout p { margin: 4px 0 0; }
+.try { border: 1px dashed var(--accent); border-radius: 8px; padding: 14px 18px; margin: 22px 0; }
+.try .label { color: var(--accent); }
+.try ol { margin: 6px 0 0; padding-left: 1.3em; }
+.try li { margin: 4px 0; }
+
+details.check { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; margin: 10px 0; }
+details.check summary { cursor: pointer; padding: 10px 14px; font-weight: 500; list-style: none; display: flex; gap: 10px; }
+details.check summary::-webkit-details-marker { display: none; }
+details.check summary::before { content: "?"; font: 600 .8rem/1.6rem var(--font-mono); width: 1.6rem; height: 1.6rem; flex: none; text-align: center; border-radius: 50%; background: var(--accent-soft); color: var(--accent); }
+details.check[open] summary::before { content: "✓"; background: var(--ok-soft); color: var(--ok); }
+details.check .answer { padding: 0 14px 12px 50px; color: var(--muted); }
+details.check .answer p { margin: 0; }
+
+.table-wrap { overflow-x: auto; margin: 14px 0 18px; border: 1px solid var(--rule); border-radius: 8px; background: var(--panel); }
+table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+th, td { text-align: left; vertical-align: top; padding: 9px 12px; border-bottom: 1px solid var(--rule); }
+th { font: 600 .72rem var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); background: var(--paper); }
+tr:last-child td { border-bottom: 0; }
+td code { white-space: nowrap; }
+
+.done-toggle {
+  display: inline-flex; align-items: center; gap: 10px; margin-top: 24px; cursor: pointer;
+  font-weight: 500; background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 9px 14px;
+}
+.done-toggle input { width: 18px; height: 18px; accent-color: var(--ok); margin: 0; }
+.done-toggle:has(input:checked) { border-color: var(--ok); background: var(--ok-soft); }
+
+.footer-note { color: var(--muted); font-size: .9rem; }
+
+@media (max-width: 900px) {
+  .page { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  aside.index { position: static; max-height: none; }
+  .index ol { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+  h2 { font-size: 1.7rem; }
+}
+@media (max-width: 520px) {
+  body { padding-inline: 16px; font-size: 15.5px; }
+  .pipeline .tool { width: 100%; flex-direction: row; gap: 8px; justify-content: flex-start; padding: 0 0 0 12px; }
+  .pipeline .tool::before { content: "↓"; }
+  .pipeline .file { flex: 1 1 100%; }
+}
+</style>
+
+<header class="masthead">
+  <div class="eyebrow">Self-study guide · C++17 · Qt 6 · CMake</div>
+  <h1>Compile, Link, Ship</h1>
+  <p class="lede">Learn to build real desktop applications in C++, from a single <code>.cpp</code> file to a signed app with a GUI, networking and hardware access. Every module ends with something you build yourself, and the Ferry file-sharing app in your <code>code/ferry</code> folder is the worked example throughout.</p>
+  <div class="pipeline" aria-label="What happens when you build a C++ program">
+    <div class="file"><b>main.cpp</b><span>your source</span></div>
+    <div class="tool"><span>preprocessor</span></div>
+    <div class="file"><b>main.i</b><span>headers pasted in</span></div>
+    <div class="tool"><span>compiler</span></div>
+    <div class="file"><b>main.s</b><span>assembly</span></div>
+    <div class="tool"><span>assembler</span></div>
+    <div class="file"><b>main.o</b><span>machine code + symbols</span></div>
+    <div class="tool"><span>linker</span></div>
+    <div class="file final"><b>app.exe</b><span>+ Qt6Core.dll …</span></div>
+  </div>
+</header>
+
+<div class="page">
+  <aside class="index" aria-label="Modules">
+    <div class="progress">
+      <div class="count" id="progressCount">0 of 12 modules done</div>
+      <div class="bar"><i id="progressBar"></i></div>
+    </div>
+    <ol id="toc">
+      <li><a href="#start"><span class="n">00</span><span>Start here</span></a></li>
+      <li><a href="#pipeline"><span class="n">01</span><span>What compiling really means</span></a></li>
+      <li><a href="#cpp"><span class="n">02</span><span>The C++ you actually need</span></a></li>
+      <li><a href="#cmake"><span class="n">03</span><span>CMake: describing a build</span></a></li>
+      <li><a href="#qobject"><span class="n">04</span><span>Qt's object model</span></a></li>
+      <li><a href="#widgets"><span class="n">05</span><span>Building GUIs with Widgets</span></a></li>
+      <li><a href="#io"><span class="n">06</span><span>Files, JSON and networking</span></a></li>
+      <li><a href="#threads"><span class="n">07</span><span>Threads without freezing</span></a></li>
+      <li><a href="#design"><span class="n">08</span><span>Interfaces between modules</span></a></li>
+      <li><a href="#native"><span class="n">09</span><span>OS, hardware &amp; other languages</span></a></li>
+      <li><a href="#debug"><span class="n">10</span><span>Debugging and testing</span></a></li>
+      <li><a href="#ship"><span class="n">11</span><span>Shipping an app</span></a></li>
+      <li><a href="#projects"><span class="n">12</span><span>Projects to build</span></a></li>
+      <li><a href="#errors"><span class="n">A</span><span>Error decoder</span></a></li>
+    </ol>
+    <div class="theme" role="group" aria-label="Theme">
+      <button type="button" data-theme-set="system" aria-pressed="true">Auto</button>
+      <button type="button" data-theme-set="light" aria-pressed="false">Light</button>
+      <button type="button" data-theme-set="dark" aria-pressed="false">Dark</button>
+    </div>
+  </aside>
+
+  <main>
+<!-- ============================================================ 00 -->
+<section class="module" id="start">
+  <div class="module-head"><span class="num">MODULE 00</span><span class="time">~1 hour</span></div>
+  <h2>Start here</h2>
+  <p>The guide is ordered so that each module only uses things from earlier ones. Work through it with an editor and a terminal open: read a section, type the code yourself (don't paste it), break it on purpose, and read the error. Most of programming in C++ is learning to read compiler and linker messages calmly; <a href="#errors">Appendix A</a> decodes the common ones.</p>
+  <p>Plan on 6–10 weeks at a few hours a week. You already know some C from microcontroller work, which helps: C++ keeps C's model of memory and compilation and adds classes, templates, a large standard library and safer ways to manage resources.</p>
+
+  <h3>Your toolbox on this PC</h3>
+  <p>Everything below is already installed on your Windows machine.</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Tool</th><th>Where</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td>Qt 6.11.1 (MinGW kit)</td><td><code>C:\Qt\6.11.1\mingw_64</code></td><td>GUI, networking, JSON, threads, charts, tests</td></tr>
+      <tr><td>MinGW g++ 13.1</td><td><code>C:\Qt\Tools\mingw1310_64\bin</code></td><td>Compiler and linker that Qt was built with</td></tr>
+      <tr><td>CMake 3.30</td><td><code>C:\Qt\Tools\CMake_64\bin</code></td><td>Describes the build, generates Ninja files</td></tr>
+      <tr><td>Ninja</td><td><code>C:\Qt\Tools\Ninja</code></td><td>Runs the build fast and in parallel</td></tr>
+      <tr><td>Qt Creator</td><td>Start menu</td><td>IDE: editor, debugger, designer, CMake integration</td></tr>
+      <tr><td>gdb</td><td>next to g++</td><td>Debugger (Qt Creator drives it for you)</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="callout warn">
+    <div class="label">Watch out: two compilers on your PATH</div>
+    <p>Your PATH also has <code>C:\msys64\ucrt64\bin\g++.exe</code>. It is a different MinGW build from the one Qt was compiled with. Mixing them gives baffling link errors or crashes at startup (the wrong <code>libstdc++-6.dll</code> gets loaded). For Qt projects, always use the Qt Creator kit, or put <code>C:\Qt\Tools\mingw1310_64\bin</code> <em>first</em> on PATH in your terminal, as below.</p>
+  </div>
+
+  <p>A terminal you can reuse for every exercise (PowerShell):</p>
+  <div class="code"><span class="lang">powershell</span><pre><code class="language-powershell"># Put Qt's toolchain first for this terminal session only
+$env:PATH = "C:\Qt\Tools\mingw1310_64\bin;C:\Qt\Tools\Ninja;C:\Qt\Tools\CMake_64\bin;C:\Qt\6.11.1\mingw_64\bin;$env:PATH"
+g++ --version      # should say 13.1.0 (x86_64-posix-seh-rev1)
+cmake --version    # 3.30.x</code></pre></div>
+  <p>On your Mac, the equivalent is <code>xcode-select --install</code> (gives you <code>clang++</code>), then <code>brew install qt cmake ninja</code>. Everything in this guide works the same there, except where a section says otherwise.</p>
+
+  <h3>How to use each module</h3>
+  <ul>
+    <li><strong>Goals</strong> tell you what you should be able to do afterwards.</li>
+    <li><strong>Try it</strong> boxes are the exercises. Do them; reading alone won't stick.</li>
+    <li><strong>Check yourself</strong> questions open to show an answer. Answer in your head first.</li>
+    <li>Tick <strong>Mark module done</strong> at the bottom. Progress is saved in this browser.</li>
+  </ul>
+</section>
+
+<!-- ============================================================ 01 -->
+<section class="module" id="pipeline" data-module>
+  <div class="module-head"><span class="num">MODULE 01</span><span class="time">~4 hours</span></div>
+  <h2>What compiling really means</h2>
+  <div class="goals"><div class="label">Goals</div><ul>
+    <li>Build a multi-file program by hand with <code>g++</code>, step by step.</li>
+    <li>Tell a compiler error from a linker error at a glance.</li>
+    <li>Know what headers, object files, static and shared libraries are, and how Windows finds a DLL.</li>
+  </ul></div>
+
+  <p>"Compiling" is really four programs run in a row, shown at the top of this page. IDEs hide them, which is why build errors feel mysterious. Run them yourself once and they stop being mysterious.</p>
+
+  <h3>One file, four steps</h3>
+  <div class="code"><span class="lang">cpp · hello.cpp</span><pre><code class="language-cpp">#include &lt;iostream&gt;
+
+int main()
+{
+    std::cout &lt;&lt; "Hello from C++\n";
+    return 0;
+}</code></pre></div>
+  <div class="code"><span class="lang">powershell</span><pre><code class="language-powershell">g++ -E hello.cpp -o hello.i     # 1. preprocess: #include pasted in (open it: ~30,000 lines!)
+g++ -S hello.cpp -o hello.s     # 2. compile to assembly
+g++ -c hello.cpp -o hello.o     # 3. assemble to an object file (machine code + symbol table)
+g++ hello.o -o hello.exe        # 4. link: resolve symbols, add the C++ runtime, write the .exe
+.\hello.exe</code></pre></div>
+  <p>Normally you write <code>g++ hello.cpp -o hello.exe</code> and all four happen at once. The important split is between steps 1–3, which work on <strong>one file at a time</strong> (a <em>translation unit</em>), and step 4, which sees <strong>everything</strong>.</p>
+
+  <h3>Several files: declarations and definitions</h3>
+  <p>A <em>declaration</em> says something exists (“there is a function <code>add</code> taking two ints”). A <em>definition</em> provides it. Headers carry declarations so every <code>.cpp</code> can call the function; exactly one <code>.cpp</code> carries the definition.</p>
+  <div class="code"><span class="lang">cpp · mathx.h</span><pre><code class="language-cpp">#pragma once            // include this header at most once per translation unit
+
+int add(int a, int b);  // declaration only</code></pre></div>
+  <div class="code"><span class="lang">cpp · mathx.cpp</span><pre><code class="language-cpp">#include "mathx.h"
+
+int add(int a, int b) { return a + b; }   // the one definition</code></pre></div>
+  <div class="code"><span class="lang">cpp · main.cpp</span><pre><code class="language-cpp">#include &lt;iostream&gt;
+#include "mathx.h"
+
+int main() { std::cout &lt;&lt; add(2, 3) &lt;&lt; '\n'; }</code></pre></div>
+  <div class="code"><span class="lang">powershell</span><pre><code class="language-powershell">g++ -c mathx.cpp -o mathx.o
+g++ -c main.cpp  -o main.o
+g++ main.o mathx.o -o app.exe     # works
+
+g++ main.o -o app.exe             # forget mathx.o and the LINKER complains:
+# undefined reference to `add(int, int)'</code></pre></div>
+  <p><code>main.cpp</code> compiled fine on its own because the header promised <code>add</code> exists. Only the linker discovered nobody delivered on that promise. Look inside the object files:</p>
+  <div class="code"><span class="lang">powershell</span><pre><code class="language-powershell">nm mathx.o      # T _Z3addii   -> "T" = defined here (in the Text section)
+nm main.o       # U _Z3addii   -> "U" = used here, defined somewhere else
+nm -C main.o    # -C demangles: U add(int, int)</code></pre></div>
+  <p><code>_Z3addii</code> is the <em>mangled</em> name: C++ encodes parameter types into symbol names so overloads like <code>add(int,int)</code> and <code>add(double,double)</code> can coexist. That detail returns in <a href="#native">Module 09</a> when you call C++ from other languages.</p>
+
+  <h3>Libraries</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Kind</th><th>Windows (MinGW)</th><th>macOS</th><th>When the code is joined</th></tr></thead>
+    <tbody>
+      <tr><td>Static library</td><td><code>libmathx.a</code></td><td><code>libmathx.a</code></td><td>Copied into your .exe at link time</td></tr>
+      <tr><td>Shared library</td><td><code>mathx.dll</code> (+ <code>libmathx.dll.a</code> import lib)</td><td><code>libmathx.dylib</code></td><td>Loaded when the program starts</td></tr>
+    </tbody>
+  </table></div>
+  <div class="code"><span class="lang">powershell</span><pre><code class="language-powershell"># static: an archive of .o files
+ar rcs libmathx.a mathx.o
+g++ main.o -L. -lmathx -o app.exe          # -L = where to look, -l = which lib (lib*.a)
+
+# shared
+g++ -shared mathx.o -o mathx.dll -Wl,--out-implib,libmathx.dll.a
+g++ main.o -L. -lmathx -o app.exe          # now app.exe needs mathx.dll at runtime</code></pre></div>
+  <p>Windows looks for DLLs in the folder of the .exe, then the system folders, then every folder on <code>PATH</code>. That is why a Qt program runs from Qt Creator (Qt's <code>bin</code> is on its PATH) but fails with “Qt6Core.dll was not found” when double-clicked, until you deploy the DLLs next to it (<a href="#ship">Module 11</a>). macOS instead records an install path such as <code>@rpath/QtCore.framework</code> inside the binary.</p>
+
+  <h3>Compiler flags you will use daily</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Flag</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td><code>-std=c++17</code></td><td>Language version (Qt 6 needs at least C++17)</td></tr>
+      <tr><td><code>-Wall -Wextra</code></td><td>Turn on useful warnings. Treat warnings as bugs.</td></tr>
+      <tr><td><code>-g</code> / <code>-O0</code></td><td>Debug info, no optimisation: for the debugger</td></tr>
+      <tr><td><code>-O2</code></td><td>Optimise for release builds</td></tr>
+      <tr><td><code>-I dir</code></td><td>Search <code>dir</code> for <code>#include</code> files</td></tr>
+      <tr><td><code>-D NAME=value</code></td><td>Define a macro, like writing <code>#define</code></td></tr>
+      <tr><td><code>-L dir</code>, <code>-l name</code></td><td>Linker: library search folder, library to link</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="try"><div class="label">Try it</div><ol>
+    <li>Build the three-file program by hand. Then add a second definition of <code>add</code> in <code>main.cpp</code> and read the “multiple definition” error. Which step produced it?</li>
+    <li>Delete <code>#pragma once</code>, include <code>mathx.h</code> twice in <code>main.cpp</code>, and add a <code>struct Point { int x, y; };</code> to the header. Read the “redefinition” error. Which step produced that one?</li>
+    <li>Make <code>mathx</code> a DLL, run <code>app.exe</code>, then move <code>mathx.dll</code> to another folder and run it again.</li>
+  </ol></div>
+
+  <details class="check"><summary>A message says <code>undefined reference to `Widget::paint()'</code>. Is the problem in your header, or in your build?</summary>
+    <div class="answer"><p>In the build. “Undefined reference” is the linker: something was declared and used, but no object file or library given to the linker defines it. Either the <code>.cpp</code> with the definition isn't being compiled/linked, or a library is missing from the link line (in CMake: missing from <code>target_link_libraries</code>).</p></div></details>
+  <details class="check"><summary>Why can a header contain a class definition but not a normal function definition?</summary>
+    <div class="answer"><p>Every <code>.cpp</code> that includes the header gets its own copy. Class definitions (and <code>inline</code> functions, templates, functions defined inside a class body) are allowed to appear in many translation units as long as they're identical. A normal function definition would appear in several object files and the linker would report “multiple definition”. Mark such functions <code>inline</code> or move them to a <code>.cpp</code>.</p></div></details>
+
+  <label class="done-toggle"><input type="checkbox" id="done-pipeline"> Mark module done</label>
+</section>
+
+<!-- ============================================================ 02 -->
+<section class="module" id="cpp" data-module>
+  <div class="module-head"><span class="num">MODULE 02</span><span class="time">~2 weeks</span></div>
+  <h2>The C++ you actually need</h2>
+  <div class="goals"><div class="label">Goals</div><ul>
+    <li>Write classes that own resources safely (RAII) without manual <code>delete</code>.</li>
+    <li>Choose between values, references, pointers and smart pointers.</li>
+    <li>Use lambdas, the standard containers, <code>std::optional</code> and <code>enum class</code> fluently.</li>
+  </ul></div>
+  <p>C++ is huge; app code uses a well-defined subset. For depth, work through <a href="https://www.learncpp.com" target="_blank" rel="noopener">learncpp.com</a> chapters 1–21 alongside this module and keep <a href="https://en.cppreference.com" target="_blank" rel="noopener">cppreference.com</a> open as the reference.</p>
+
+  <h3>Ownership is the central idea</h3>
+  <p>In C you remember to <code>fclose</code> and <code>free</code>. In C++ an object's <em>destructor</em> runs automatically when it goes out of scope, so you tie every resource to an object. This is called RAII (resource acquisition is initialisation), and it makes leaks and double-frees disappear even when errors or early returns happen.</p>
+  <div class="code"><span class="lang">cpp</span><pre><code class="language-cpp">#include &lt;cstdio&gt;
+#include &lt;stdexcept&gt;
+#include &lt;string&gt;
+
+class File {
+public:
+    explicit File(const std::string &amp;path) : m_f(std::fopen(path.c_str(), "rb"))
+    {
+        if (!m_f) throw std::runtime_error("cannot open " + path);
+    }
+    ~File() { std::fclose(m_f); }           // always runs, even on exceptions
+
+    File(const File &amp;) = delete;            // one owner: no copies...
+    File &amp;operator=(const File &amp;) = delete;
+
+    std::FILE *get() const { return m_f; }
+
+private:
+    std::FILE *m_f;
+};
+
+void readHeader(const std::string &amp;path)
+{
+    File f(path);                           // opened here
+    char magic[4];
+    if (std::fread(magic, 1, 4, f.get()) != 4)
+        return;                             // closed here...
+    // ...
+}                                           // ...or here. Never leaked.</code></pre></div>
+
+  <h3>Values, references, pointers</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Write</th><th>Means</th><th>Use for</th></tr></thead>
+    <tbody>
+      <tr><td><code>T x</code></td><td>You own a value</td><td>The default. Small types, strings, containers.</td></tr>
+      <tr><td><code>const T &amp;x</code></td><td>Borrowed, read-only, never null</td><td>Function parameters bigger than a pointer</td></tr>
+      <tr><td><code>T &amp;x</code></td><td>Borrowed, may modify, never null</td><td>Output parameters (sparingly)</td></tr>
+      <tr><td><code>T *x</code></td><td>Borrowed, may be null</td><td>Optional links; Qt widget pointers owned by a parent</td></tr>
+      <tr><td><code>std::unique_ptr&lt;T&gt;</code></td><td>Sole owner on the heap</td><td>Polymorphic objects, things that must not move</td></tr>
+      <tr><td><code>std::shared_ptr&lt;T&gt;</code></td><td>Shared owner (reference counted)</td><td>Rarely. When ownership truly is shared.</td></tr>
+    </tbody>
+  </table></div>
+  <p>Ferry's receiver stores its current session as <code>std::unique_ptr&lt;Session&gt; m_session;</code> (<code>desktop/src/core/ReceiveService.h</code>). Assigning a new session automatically destroys the old one.</p>
+
+  <h3>The everyday toolkit</h3>
+  <div class="code"><span class="lang">cpp</span><pre><code class="language-cpp">#include &lt;algorithm&gt;
+#include &lt;map&gt;
+#include &lt;optional&gt;
+#include &lt;string&gt;
+#include &lt;vector&gt;
+
+enum class Status { Queued, Active, Done, Failed };   // scoped: write Status::Done
+
+struct Transfer {
+    std::string name;
+    long long size = 0;            // default member initialisers
+    Status status = Status::Queued;
+};
+
+std::optional&lt;Transfer&gt; findByName(const std::vector&lt;Transfer&gt; &amp;list, const std::string &amp;name)
+{
+    auto it = std::find_if(list.begin(), list.end(),
+                           [&amp;](const Transfer &amp;t) { return t.name == name; });   // lambda
+    if (it == list.end())
+        return std::nullopt;
+    return *it;
+}
+
+int main()
+{
+    std::vector&lt;Transfer&gt; queue{{"photo.jpg", 2'400'000}, {"notes.md", 1234}};
+    queue.push_back({"song.mp3", 4'100'000});
+
+    long long total = 0;
+    for (const auto &amp;t : queue)    // range-for; auto deduces Transfer
+        total += t.size;
+
+    std::map&lt;std::string, int&gt; counts;
+    counts["jpg"]++;
+
+    if (auto t = findByName(queue, "notes.md"))
+        t-&gt;status = Status::Done;     // modifies the copy in t, not the vector
+
+    for (auto &amp;[ext, n] : counts) { /* structured bindings */ }
+}</code></pre></div>
+
+  <h3>Lambdas and captures</h3>
+  <p>Lambdas are everywhere in Qt code (button clicks, network replies). The capture list decides what the lambda can see:</p>
+  <ul>
+    <li><code>[x]</code> copies <code>x</code> now; <code>[&amp;x]</code> refers to <code>x</code> (it must still exist when the lambda runs).</li>
+    <li><code>[this]</code> lets you use members; the object must outlive the lambda.</li>
+    <li>For callbacks that run later (network, timers), capture by value or capture <code>this</code> with a guard. Capturing a local by reference in a delayed callback is the classic crash.</li>
+  </ul>
+
+  <h3>Move semantics in one paragraph</h3>
+  <p>Copying a <code>std::vector</code> of a million items copies a million items. <em>Moving</em> it just steals the pointer inside. The compiler moves automatically when returning local variables and when the source is a temporary; write <code>std::move(x)</code> when you're done with <code>x</code> and want to hand it over. After a move, <code>x</code> is valid but unspecified: only assign to it or destroy it.</p>
+
+  <div class="try"><div class="label">Try it</div><ol>
+    <li>Write a console “transfer queue” program: read file paths from the command line (<code>argv</code>), store them in a <code>std::vector&lt;Transfer&gt;</code> with their sizes (<code>std::filesystem::file_size</code>), sort by size with <code>std::sort</code> and a lambda, and print a table.</li>
+    <li>Add a class <code>Logger</code> that opens a file in its constructor and closes it in its destructor. Prove the destructor runs by printing from it, including when you <code>throw</code> in the middle of <code>main</code> and catch it.</li>
+  </ol></div>
+  <details class="check"><summary>A function takes <code>std::string name</code>. Should it be <code>const std::string &amp;name</code>?</summary>
+    <div class="answer"><p>If it only reads the string, yes: passing by const reference avoids a copy. If the function stores the string somewhere (for example in a member), taking it by value and then <code>std::move</code>-ing it into the member is the modern idiom.</p></div></details>
+  <label class="done-toggle"><input type="checkbox" id="done-cpp"> Mark module done</label>
+</section>
+
+<!-- ============================================================ 03 -->
+<section class="module" id="cmake" data-module>
+  <div class="module-head"><span class="num">MODULE 03</span><span class="time">~4 hours</span></div>
+  <h2>CMake: describing a build</h2>
+  <div class="goals"><div class="label">Goals</div><ul>
+    <li>Write a <code>CMakeLists.txt</code> for an app split into a library and an executable.</li>
+    <li>Configure, build and install from the terminal, and open the same project in Qt Creator.</li>
+    <li>Understand <code>PUBLIC</code> / <code>PRIVATE</code> and why modern CMake is “target-based”.</li>
+  </ul></div>
+  <p>Typing <code>g++</code> lines doesn't scale past a handful of files or one platform. CMake is a description of <em>what</em> to build; it then generates the actual build system (Ninja, Visual Studio, Xcode). The same <code>CMakeLists.txt</code> builds Ferry on Windows and macOS.</p>
+
+  <div class="code"><span class="lang">cmake · CMakeLists.txt</span><pre><code class="language-cmake">cmake_minimum_required(VERSION 3.21)
+project(Notes VERSION 0.1 LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# A library target: the logic, with no user interface
+add_library(notes_core STATIC
+    src/core/Note.h  src/core/Note.cpp
+    src/core/Store.h src/core/Store.cpp)
+target_include_directories(notes_core PUBLIC src)          # users of notes_core also get -I src
+target_compile_options(notes_core PRIVATE -Wall -Wextra)  # only for compiling notes_core itself
+
+# An executable target that uses the library
+add_executable(notes src/main.cpp)
+target_link_libraries(notes PRIVATE notes_core)</code></pre></div>
+
+  <div class="code"><span class="lang">powershell</span><pre><code class="language-powershell">cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug   # configure: read CMakeLists, write build/
+cmake --build build                                     # build (runs ninja)
+.\build\notes.exe
+cmake --build build --target clean                      # start over (or delete build/)</code></pre></div>
+  <p>Keep the build folder outside your source tree (or ignored by git). You can have several at once: <code>build-debug</code>, <code>build-release</code>.</p>
+
+  <h3>PUBLIC, PRIVATE, INTERFACE</h3>
+  <p>Every setting attached to a target says who needs it:</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Keyword</th><th>Used to build this target</th><th>Passed on to targets that link it</th></tr></thead>
+    <tbody>
+      <tr><td><code>PRIVATE</code></td><td>yes</td><td>no</td></tr>
+      <tr><td><code>PUBLIC</code></td><td>yes</td><td>yes</td></tr>
+      <tr><td><code>INTERFACE</code></td><td>no</td><td>yes</td></tr>
+    </tbody>
+  </table></div>
+  <p>Rule of thumb: if a library's <em>header</em> mentions something (Qt types, an include path), it's <code>PUBLIC</code>. If only its <code>.cpp</code> files do, it's <code>PRIVATE</code>.</p>
+
+  <h3>Adding Qt</h3>
+  <div class="code"><span class="lang">cmake</span><pre><code class="language-cmake">find_package(Qt6 6.5 REQUIRED COMPONENTS Widgets Network)
+qt_standard_project_setup()          # turns on AUTOMOC etc. (explained in Module 04)
+
+qt_add_executable(notes WIN32 MACOSX_BUNDLE src/main.cpp)   # WIN32: no console window
+target_link_libraries(notes PRIVATE notes_core Qt6::Widgets Qt6::Network)</code></pre></div>
+  <div class="code"><span class="lang">powershell</span><pre><code class="language-powershell">cmake -S . -B build -G Ninja -DCMAKE_PREFIX_PATH=C:/Qt/6.11.1/mingw_64
+# macOS:  cmake -S . -B build -G Ninja -DCMAKE_PREFIX_PATH="$(brew --prefix qt)"</code></pre></div>
+  <p><code>CMAKE_PREFIX_PATH</code> tells <code>find_package</code> where Qt lives. Qt Creator fills it in from the kit you pick, so <strong>File › Open File or Project › CMakeLists.txt</strong> is all you need there.</p>
+
+  <h3>Platform differences, in CMake</h3>
+  <div class="code"><span class="lang">cmake</span><pre><code class="language-cmake">if(WIN32)
+    target_sources(notes PRIVATE platform/windows/notes.rc)     # icon + version info
+    target_link_libraries(notes PRIVATE ws2_32)                 # a Win32 library
+elseif(APPLE)
+    target_link_libraries(notes PRIVATE "-framework IOKit")     # a macOS framework
+endif()
+
+# Generator expressions: decided at build time, per target/language/compiler
+target_compile_options(notes_core PRIVATE
+    $&lt;$&lt;CXX_COMPILER_ID:GNU,Clang,AppleClang&gt;:-Wall -Wextra&gt;
+    $&lt;$&lt;CXX_COMPILER_ID:MSVC&gt;:/W4&gt;)</code></pre></div>
+
+  <div class="callout"><div class="label">Worked example</div>
+    <p>Read <code>ferry/desktop/CMakeLists.txt</code> top to bottom. It has a static library (<code>ferry_lib</code>) shared by the app and two test programs, resources, a Windows <code>.rc</code> file, a macOS <code>Info.plist</code>, an optional test build and an install step. You should now understand every line.</p></div>
+
+  <div class="try"><div class="label">Try it</div><ol>
+    <li>Turn your Module 02 transfer-queue program into a CMake project: the logic in a <code>queue_core</code> library, <code>main.cpp</code> in an executable.</li>
+    <li>Add an option: <code>option(QUEUE_VERBOSE "Print debug output" OFF)</code> that adds <code>target_compile_definitions(queue_core PRIVATE QUEUE_VERBOSE)</code>, and use <code>#ifdef QUEUE_VERBOSE</code> in code. Configure with <code>-DQUEUE_VERBOSE=ON</code>.</li>
+    <li>Open the same folder in Qt Creator and build it there.</li>
+  </ol></div>
+  <details class="check"><summary>You added <code>src/core/Parser.cpp</code> to your folder, but the linker says <code>undefined reference to Parser::parse</code>. Why?</summary>
+    <div class="answer"><p>CMake only compiles files listed in a target. Add <code>src/core/Parser.cpp</code> (and its header) to <code>add_library(notes_core …)</code>.</p></div></details>
+  <label class="done-toggle"><input type="checkbox" id="done-cmake"> Mark module done</label>
+</section>
+
+<!-- ============================================================ 04 -->
+<section class="module" id="qobject" data-module>
+  <div class="module-head"><span class="num">MODULE 04</span><span class="time">~1 week</span></div>
+  <h2>Qt's object model</h2>
+  <div class="goals"><div class="label">Goals</div><ul>
+    <li>Write a <code>QObject</code> subclass with your own signals and slots.</li>
+    <li>Explain the event loop and why you must never block it.</li>
+    <li>Use parent–child ownership and know when Qt deletes objects for you.</li>
+  </ul></div>
+  <p>Qt adds three ideas on top of C++: objects that can talk to each other without knowing each other's type (<strong>signals and slots</strong>), an <strong>event loop</strong> that delivers clicks, timers and network data, and <strong>object trees</strong> that clean up after themselves.</p>
+
+  <h3>Signals and slots</h3>
+  <div class="code"><span class="lang">cpp · counter.h</span><pre><code class="language-cpp">#pragma once
+#include &lt;QObject&gt;
+
+class Counter : public QObject {
+    Q_OBJECT                                // needed for signals/slots: see "moc" below
+public:
+    explicit Counter(QObject *parent = nullptr) : QObject(parent) {}
+    int value() const { return m_value; }
+
+public slots:
+    void increment()
+    {
+        ++m_value;
+        emit valueChanged(m_value);         // "emit" is just a marker; this calls the signal
+    }
+
+signals:
+    void valueChanged(int newValue);        // declared, never implemented by you
+
+private:
+    int m_value = 0;
+};</code></pre></div>
+  <div class="code"><span class="lang">cpp · main.cpp</span><pre><code class="language-cpp">#include &lt;QCoreApplication&gt;
+#include &lt;QDebug&gt;
+#include &lt;QTimer&gt;
+#include "counter.h"
+
+int main(int argc, char *argv[])
+{
+    QCoreApplication app(argc, argv);
+
+    Counter counter;
+    QTimer timer;
+    QObject::connect(&amp;timer, &amp;QTimer::timeout, &amp;counter, &amp;Counter::increment);
+    QObject::connect(&amp;counter, &amp;Counter::valueChanged, [&amp;](int v) {
+        qDebug() &lt;&lt; "tick" &lt;&lt; v;
+        if (v == 5)
+            app.quit();
+    });
+    timer.start(500);                       // fire every 500 ms
+
+    return app.exec();                      // the event loop runs until quit()
+}</code></pre></div>
+  <p><code>Counter</code> doesn't know a timer drives it, and doesn't know who listens. That decoupling is what lets Ferry's network services stay ignorant of the windows that display them.</p>
+
+  <h3>The event loop</h3>
+  <p><code>app.exec()</code> is a loop: wait for something to happen (mouse, key, timer, bytes on a socket), deliver it to the object it belongs to, repeat. Your code runs <em>inside</em> those deliveries. If a slot takes 5 seconds, nothing else happens for 5 seconds: the window doesn't repaint and the OS marks it “Not responding”.</p>
+  <div class="callout warn"><div class="label">Rule</div><p>Never sleep, busy-wait or do long blocking work on the GUI thread. Use timers, Qt's asynchronous APIs (networking is asynchronous by design), or a worker thread (<a href="#threads">Module 07</a>).</p></div>
+
+  <h3>Object trees: who deletes what</h3>
+  <p>Give a <code>QObject</code> a parent and the parent deletes it when the parent is destroyed. That's why Qt code is full of <code>new</code> with no matching <code>delete</code>:</p>
+  <div class="code"><span class="lang">cpp</span><pre><code class="language-cpp">auto *window = new QWidget;                      // top-level: you own it (or create it on the stack)
+auto *button = new QPushButton("OK", window);    // owned by window
+auto *layout = new QVBoxLayout(window);          // owned by window
+layout-&gt;addWidget(button);                       // re-parents into the layout's widget anyway
+
+// Objects that should die "soon but not now" (e.g. inside one of their own signals):
+reply-&gt;deleteLater();                            // deleted when control returns to the event loop</code></pre></div>
+
+  <h3>moc, and the “vtable” error</h3>
+  <p><code>Q_OBJECT</code> makes Qt's <em>Meta-Object Compiler</em> (moc) generate an extra <code>.cpp</code> containing the signal implementations and type information. With <code>qt_standard_project_setup()</code>, CMake's AUTOMOC runs moc for you. If moc doesn't run on a class (header not listed in the target, or <code>Q_OBJECT</code> added without re-running CMake), the link fails with <code>undefined reference to `vtable for Counter'</code>. Re-run CMake and make sure the header is in the target.</p>
+
+  <div class="try"><div class="label">Try it</div><ol>
+    <li>Build the counter. Add a second listener lambda; then disconnect the first after three ticks (<code>connect</code> returns a <code>QMetaObject::Connection</code>).</li>
+    <li>Add a signal <code>reachedLimit()</code> emitted at 10, and connect it to <code>QCoreApplication::quit</code>.</li>
+    <li>Put <code>QThread::sleep(3)</code> in the lambda and watch the ticks bunch up. That's a blocked event loop.</li>
+  </ol></div>
+  <details class="check"><summary>A lambda connected to a network reply captures a <code>QLabel *label</code>. The user closes the window before the reply arrives. What happens, and how do you prevent it?</summary>
+    <div class="answer"><p>The label is deleted with its window, then the lambda runs and uses a dangling pointer: a crash. Pass a <em>context object</em> as the third argument: <code>connect(reply, &amp;QNetworkReply::finished, label, [label]{ … })</code>. Qt automatically disconnects when the context object is destroyed. Alternatively hold a <code>QPointer&lt;QLabel&gt;</code> and check it.</p></div></details>
+  <label class="done-toggle"><input type="checkbox" id="done-qobject"> Mark module done</label>
+</section>
+
+<!-- ============================================================ 05 -->
+<section class="module" id="widgets" data-module>
+  <div class="module-head"><span class="num">MODULE 05</span><span class="time">~2 weeks</span></div>
+  <h2>Building GUIs with Qt Widgets</h2>
+  <div class="goals"><div class="label">Goals</div><ul>
+    <li>Build windows from layouts and standard widgets, in code.</li>
+    <li>Draw your own widgets with <code>QPainter</code>.</li>
+    <li>Style an app with Qt Style Sheets and support light and dark mode.</li>
+  </ul></div>
+
+  <h3>A complete small app</h3>
+  <div class="code"><span class="lang">cpp · main.cpp</span><pre><code class="language-cpp">#include &lt;QApplication&gt;
+#include &lt;QLabel&gt;
+#include &lt;QLineEdit&gt;
+#include &lt;QPushButton&gt;
+#include &lt;QVBoxLayout&gt;
+#include &lt;QWidget&gt;
+
+int main(int argc, char *argv[])
+{
+    QApplication app(argc, argv);
+
+    QWidget window;
+    window.setWindowTitle("Greeter");
+
+    auto *layout = new QVBoxLayout(&amp;window);
+    auto *name = new QLineEdit;
+    name-&gt;setPlaceholderText("Your name");
+    auto *button = new QPushButton("Greet");
+    auto *output = new QLabel;
+    layout-&gt;addWidget(name);
+    layout-&gt;addWidget(button);
+    layout-&gt;addWidget(output);
+
+    auto greet = [=] { output-&gt;setText("Hello, " + name-&gt;text() + "!"); };
+    QObject::connect(button, &amp;QPushButton::clicked, greet);
+    QObject::connect(name, &amp;QLineEdit::returnPressed, greet);
+
+    window.resize(320, 140);
+    window.show();
+    return app.exec();
+}</code></pre></div>
+  <div class="code"><span class="lang">cmake · CMakeLists.txt</span><pre><code class="language-cmake">cmake_minimum_required(VERSION 3.21)
+project(Greeter LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 17)
+find_package(Qt6 REQUIRED COMPONENTS Widgets)
+qt_standard_project_setup()
+qt_add_executable(greeter WIN32 main.cpp)
+target_link_libraries(greeter PRIVATE Qt6::Widgets)</code></pre></div>
+
+  <h3>Layouts, not coordinates</h3>
+  <p>Never position widgets with fixed pixel coordinates. Layouts (<code>QVBoxLayout</code>, <code>QHBoxLayout</code>, <code>QGridLayout</code>, <code>QFormLayout</code>) resize everything correctly on any screen, DPI and language. Nest them for structure; use <code>addStretch()</code> to push things apart, and <em>size policies</em> to say whether a widget wants to grow.</p>
+
+  <h3>Structure: one class per screen</h3>
+  <p>Past the first exercise, give each window or page its own class, with child widgets as members and signals to report what the user did. Ferry's <code>SendPage</code> emits <code>sendRequested(device)</code> and lets <code>MainWindow</code> decide what happens. The page never talks to the network directly.</p>
+  <div class="code"><span class="lang">cpp · NotePage.h</span><pre><code class="language-cpp">#pragma once
+#include &lt;QWidget&gt;
+class QListWidget;
+class QLineEdit;
+
+class NotePage : public QWidget {
+    Q_OBJECT
+public:
+    explicit NotePage(QWidget *parent = nullptr);
+    void setNotes(const QStringList &amp;notes);
+
+signals:
+    void noteAdded(const QString &amp;text);    // the page reports; someone else stores
+
+private:
+    QListWidget *m_list;
+    QLineEdit *m_input;
+};</code></pre></div>
+  <p>Forward-declaring <code>class QListWidget;</code> in the header instead of including it keeps compile times down: only the <code>.cpp</code> needs the full header.</p>
+
+  <h3>Custom painting</h3>
+  <p>When no standard widget looks right, subclass <code>QWidget</code> and override <code>paintEvent</code>. Ferry's pulsing receive beacon and toggle switch are drawn this way (<code>desktop/src/ui/Widgets.cpp</code>).</p>
+  <div class="code"><span class="lang">cpp</span><pre><code class="language-cpp">class Gauge : public QWidget {
+public:
+    void setValue(double v) { m_value = std::clamp(v, 0.0, 1.0); update(); }   // update() = repaint soon
+    QSize sizeHint() const override { return {160, 160}; }
+
+protected:
+    void paintEvent(QPaintEvent *) override
+    {
+        QPainter p(this);
+        p.setRenderHint(QPainter::Antialiasing);
+        const QRectF r = QRectF(rect()).adjusted(10, 10, -10, -10);
+        p.setPen(QPen(palette().mid().color(), 10, Qt::SolidLine, Qt::RoundCap));
+        p.drawArc(r, 225 * 16, -270 * 16);                        // angles in 1/16 degree
+        p.setPen(QPen(palette().highlight().color(), 10, Qt::SolidLine, Qt::RoundCap));
+        p.drawArc(r, 225 * 16, int(-270 * 16 * m_value));
+        p.setPen(palette().text().color());
+        p.drawText(rect(), Qt::AlignCenter, QString::number(int(m_value * 100)) + "%");
+    }
+
+private:
+    double m_value = 0.0;
+};</code></pre></div>
+
+  <h3>Styling</h3>
+  <p>Qt Style Sheets (QSS) use CSS-like syntax. Combine them with <em>dynamic properties</em> to create variants without subclassing:</p>
+  <div class="code"><span class="lang">cpp</span><pre><code class="language-cpp">app.setStyle("Fusion");            // same look on every OS, fully stylable
+app.setStyleSheet(R"(
+    QPushButton { border: 1px solid #D9DCD3; border-radius: 8px; padding: 7px 16px; }
+    QPushButton:hover { background: #F1F3F6; }
+    QPushButton[primary="true"] { background: #2346B0; color: white; border: none; }
+)");
+saveButton-&gt;setProperty("primary", true);</code></pre></div>
+  <p>For dark mode, ask <code>QGuiApplication::styleHints()-&gt;colorScheme()</code> and listen to its <code>colorSchemeChanged</code> signal, then swap the palette and style sheet. Ferry's <code>Theme.cpp</code> builds its whole style sheet from named colour tokens so both themes stay consistent.</p>
+
+  <h3>Designer, QML, and other choices</h3>
+  <p>Qt Creator's <strong>Designer</strong> lets you draw forms visually (<code>.ui</code> files); CMake's AUTOUIC compiles them. It's great for settings dialogs and forms. <strong>Qt Quick/QML</strong> is Qt's other UI technology, declarative and animation-friendly, and better for touch and fluid designs; your logic stays in C++. Learn Widgets first: it teaches the underlying model, and it's what Ferry uses.</p>
+
+  <div class="try"><div class="label">Try it</div><ol>
+    <li>Build the greeter. Then rebuild it as a <code>QMainWindow</code> with a menu bar (<strong>File › Quit</strong>, shortcut <kbd>Ctrl</kbd>+<kbd>Q</kbd>) and a status bar that shows how many greetings were made.</li>
+    <li>Write <code>Gauge</code>, drive it from a <code>QSlider</code>, and make it animate smoothly with <code>QVariantAnimation</code>.</li>
+    <li>Style the app with a style sheet, then add a light/dark toggle.</li>
+  </ol></div>
+  <details class="check"><summary>You change a label's text in a loop 1,000 times but only see the last value. Why?</summary>
+    <div class="answer"><p>Painting happens when control returns to the event loop. Your loop never returns, so Qt paints once at the end. To show progress, do the work in steps driven by a <code>QTimer</code>, or in a worker thread that emits progress signals.</p></div></details>
+  <label class="done-toggle"><input type="checkbox" id="done-widgets"> Mark module done</label>
+</section>
+
+<!-- ============================================================ 06 -->
+<section class="module" id="io" data-module>
+  <div class="module-head"><span class="num">MODULE 06</span><span class="time">~1.5 weeks</span></div>
+  <h2>Files, JSON and networking</h2>
+  <div class="goals"><div class="label">Goals</div><ul>
+    <li>Read and write files and JSON with Qt.</li>
+    <li>Write a TCP server and client, and send UDP broadcasts.</li>
+    <li>Make HTTP requests, and understand what's on the wire well enough to write a tiny HTTP server.</li>
+  </ul></div>
+
+  <h3>Files and JSON</h3>
+  <div class="code"><span class="lang">cpp</span><pre><code class="language-cpp">#include &lt;QFile&gt;
+#include &lt;QJsonArray&gt;
+#include &lt;QJsonDocument&gt;
+#include &lt;QJsonObject&gt;
+
+bool saveNotes(const QString &amp;path, const QStringList &amp;notes)
+{
+    QJsonArray array;
+    for (const QString &amp;n : notes)
+        array.append(n);
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly))
+        return false;                                       // file.errorString() says why
+    file.write(QJsonDocument(QJsonObject{{"version", 1}, {"notes", array}}).toJson());
+    return true;                                            // QFile closes in its destructor (RAII)
+}
+
+QStringList loadNotes(const QString &amp;path)
+{
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly))
+        return {};
+    const QJsonObject root = QJsonDocument::fromJson(file.readAll()).object();
+    QStringList notes;
+    for (const QJsonValue &amp;v : root.value("notes").toArray())
+        notes &lt;&lt; v.toString();
+    return notes;
+}</code></pre></div>
+  <p>Where to save: <code>QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)</code> gives the right per-user folder on each OS. For settings, <code>QSettings</code> uses the registry on Windows and a <code>.plist</code> on macOS automatically.</p>
+
+  <h3>TCP: an echo server</h3>
+  <div class="code"><span class="lang">cpp</span><pre><code class="language-cpp">QTcpServer server;
+QObject::connect(&amp;server, &amp;QTcpServer::newConnection, [&amp;server] {
+    while (QTcpSocket *socket = server.nextPendingConnection()) {
+        QObject::connect(socket, &amp;QTcpSocket::readyRead, socket,
+                         [socket] { socket-&gt;write(socket-&gt;readAll()); });   // echo back
+        QObject::connect(socket, &amp;QTcpSocket::disconnected, socket, &amp;QObject::deleteLater);
+    }
+});
+if (!server.listen(QHostAddress::Any, 5000))
+    qWarning() &lt;&lt; "listen failed:" &lt;&lt; server.errorString();</code></pre></div>
+  <p>Test it with <code>curl telnet://127.0.0.1:5000</code> and type something. Link <code>Qt6::Network</code>. Note there is no loop of your own and no blocking <code>recv</code>: data arrives through <code>readyRead</code> whenever it comes, possibly split into several pieces. Always buffer and parse; never assume one <code>readyRead</code> is one message.</p>
+  <div class="callout warn"><div class="label">Firewall</div><p>Listening on <code>QHostAddress::Any</code> makes Windows Firewall ask permission the first time. For local experiments, listen on <code>QHostAddress::LocalHost</code>: loopback needs no permission.</p></div>
+
+  <h3>UDP: shouting to the whole network</h3>
+  <div class="code"><span class="lang">cpp</span><pre><code class="language-cpp">QUdpSocket udp;
+udp.bind(QHostAddress::AnyIPv4, 45454, QUdpSocket::ShareAddress | QUdpSocket::ReuseAddressHint);
+udp.joinMulticastGroup(QHostAddress("239.255.0.1"));
+QObject::connect(&amp;udp, &amp;QUdpSocket::readyRead, [&amp;udp] {
+    while (udp.hasPendingDatagrams()) {
+        const QNetworkDatagram d = udp.receiveDatagram();
+        qDebug() &lt;&lt; d.senderAddress() &lt;&lt; d.data();
+    }
+});
+udp.writeDatagram("hello?", QHostAddress("239.255.0.1"), 45454);</code></pre></div>
+  <p>This is exactly how Ferry finds other devices (<code>desktop/src/core/Discovery.cpp</code>): every app joins a multicast group and announces itself in a small JSON datagram.</p>
+
+  <h3>HTTP</h3>
+  <p>As a client, use <code>QNetworkAccessManager</code>. Every request is asynchronous and returns a <code>QNetworkReply</code>:</p>
+  <div class="code"><span class="lang">cpp</span><pre><code class="language-cpp">auto *nam = new QNetworkAccessManager(&amp;app);
+QNetworkReply *reply = nam-&gt;get(QNetworkRequest(QUrl("https://api.github.com/repos/qt/qtbase")));
+QObject::connect(reply, &amp;QNetworkReply::finished, [reply] {
+    reply-&gt;deleteLater();
+    if (reply-&gt;error() != QNetworkReply::NoError) {
+        qWarning() &lt;&lt; reply-&gt;errorString();
+        return;
+    }
+    const QJsonObject repo = QJsonDocument::fromJson(reply-&gt;readAll()).object();
+    qDebug() &lt;&lt; "stars:" &lt;&lt; repo.value("stargazers_count").toInt();
+});</code></pre></div>
+  <p>HTTP itself is just text over a TCP connection. Here is a real upload request from Ferry, then the reply:</p>
+  <div class="code"><span class="lang">http · on the wire</span><pre><code class="language-plaintext">POST /api/localsend/v2/upload?sessionId=4f1c…&amp;fileId=000001-9a7e&amp;token=c2d8… HTTP/1.1
+Host: 192.168.1.31:53317
+Content-Type: application/octet-stream
+Content-Length: 2400000
+
+&lt;2,400,000 bytes of the file&gt;
+
+HTTP/1.1 200 OK
+Content-Length: 0
+Connection: close</code></pre></div>
+  <p>A server reads up to the blank line (<code>\r\n\r\n</code>), parses the request line and headers, then reads exactly <code>Content-Length</code> body bytes. Ferry's <code>HttpServer.cpp</code> (about 300 lines) does this as a small state machine and writes uploads straight to disk instead of memory. Reading it after this module is a good test of everything so far.</p>
+
+  <div class="try"><div class="label">Try it</div><ol>
+    <li>Make your notes app from Module 05 save and load JSON.</li>
+    <li>Write a LAN chat: a window with a message list and an input; every instance broadcasts messages over UDP multicast and shows what it receives. Run two copies.</li>
+    <li>Stretch: a tiny HTTP server that serves one HTML page at <code>/</code> and returns <code>404</code> for everything else. Open it in your browser.</li>
+  </ol></div>
+  <details class="check"><summary>Your TCP client sends a 10 KB JSON message, but the server's JSON parser fails half the time. Why?</summary>
+    <div class="answer"><p>TCP is a byte stream, not a message stream. The 10 KB can arrive in several <code>readyRead</code> calls. Frame your messages, for example with a length prefix or a newline terminator, accumulate bytes in a buffer, and only parse when a whole message has arrived.</p></div></details>
+  <label class="done-toggle"><input type="checkbox" id="done-io"> Mark module done</label>
+</section>
+
+<!-- ============================================================ 07 -->
+<section class="module" id="threads" data-module>
+  <div class="module-head"><span class="num">MODULE 07</span><span class="time">~1 week</span></div>
+  <h2>Threads without freezing</h2>
+  <div class="goals"><div class="label">Goals</div><ul>
+    <li>Know when you need a thread and when the event loop is enough.</li>
+    <li>Run CPU-heavy work on a worker and report progress back to the GUI safely.</li>
+  </ul></div>
+  <p>Networking and timers don't need threads in Qt; they're asynchronous already. You need a thread for work that keeps the CPU or disk busy for more than ~50 ms: hashing a large file, image processing, parsing a big log, number crunching.</p>
+  <div class="callout warn"><div class="label">The one rule</div><p>Only the main (GUI) thread may touch widgets. Workers communicate with the GUI through signals. Qt then delivers them as <em>queued</em> calls on the receiver's thread automatically.</p></div>
+
+  <h3>The quick way: QtConcurrent</h3>
+  <div class="code"><span class="lang">cpp</span><pre><code class="language-cpp">#include &lt;QtConcurrent&gt;      // link Qt6::Concurrent (installed on your PC)
+
+auto *watcher = new QFutureWatcher&lt;QByteArray&gt;(this);
+connect(watcher, &amp;QFutureWatcher&lt;QByteArray&gt;::finished, this, [this, watcher] {
+    m_hashLabel-&gt;setText(QString::fromLatin1(watcher-&gt;result().toHex()));   // back on GUI thread
+    watcher-&gt;deleteLater();
+});
+watcher-&gt;setFuture(QtConcurrent::run([path] {                                // runs on a pool thread
+    QFile f(path);
+    QCryptographicHash h(QCryptographicHash::Sha256);
+    if (f.open(QIODevice::ReadOnly))
+        h.addData(&amp;f);
+    return h.result();
+}));</code></pre></div>
+
+  <h3>The long-lived way: a worker object</h3>
+  <div class="code"><span class="lang">cpp</span><pre><code class="language-cpp">class Hasher : public QObject {
+    Q_OBJECT
+public slots:
+    void hash(const QString &amp;path)              // runs on the worker thread
+    {
+        QFile f(path);
+        if (!f.open(QIODevice::ReadOnly)) {
+            emit failed(path);
+            return;
+        }
+        QCryptographicHash h(QCryptographicHash::Sha256);
+        qint64 done = 0;
+        while (!f.atEnd()) {
+            const QByteArray chunk = f.read(1 &lt;&lt; 20);
+            h.addData(chunk);
+            done += chunk.size();
+            emit progress(done, f.size());      // queued to the GUI thread
+        }
+        emit finished(path, h.result().toHex());
+    }
+signals:
+    void progress(qint64 done, qint64 total);
+    void finished(const QString &amp;path, const QByteArray &amp;hex);
+    void failed(const QString &amp;path);
+};
+
+// In MainWindow's constructor:
+m_thread = new QThread(this);
+auto *worker = new Hasher;                       // no parent: it will live on another thread
+worker-&gt;moveToThread(m_thread);
+connect(m_thread, &amp;QThread::finished, worker, &amp;QObject::deleteLater);
+connect(this, &amp;MainWindow::hashRequested, worker, &amp;Hasher::hash);
+connect(worker, &amp;Hasher::progress, this, &amp;MainWindow::showProgress);
+m_thread-&gt;start();
+
+// In MainWindow's destructor:
+m_thread-&gt;quit();
+m_thread-&gt;wait();</code></pre></div>
+  <p>If two threads touch the same plain data (not through signals), protect it with <code>QMutex</code>/<code>std::mutex</code> and <code>QMutexLocker</code>/<code>std::lock_guard</code>, or use <code>std::atomic</code> for single counters. Ferry's iOS code does the same with a small lock-protected <code>Locked&lt;T&gt;</code> box.</p>
+
+  <div class="try"><div class="label">Try it</div><ol>
+    <li>Build a “File Fingerprint” app: drop a file on the window, show a progress bar while a worker computes its SHA-256, then show the hash with a Copy button. The window must stay responsive (try dragging it) while hashing a 4 GB file.</li>
+    <li>Add a Cancel button. Hint: a <code>std::atomic&lt;bool&gt;</code> the worker checks every chunk.</li>
+  </ol></div>
+  <details class="check"><summary>Why does <code>worker</code> have no parent before <code>moveToThread</code>?</summary>
+    <div class="answer"><p>An object can only be moved to another thread if it has no parent; children always live on their parent's thread. Ownership is handled instead by connecting <code>QThread::finished</code> to <code>deleteLater</code>.</p></div></details>
+  <label class="done-toggle"><input type="checkbox" id="done-threads"> Mark module done</label>
+</section>
+
+<!-- ============================================================ 08 -->
+<section class="module" id="design" data-module>
+  <div class="module-head"><span class="num">MODULE 08</span><span class="time">~4 hours</span></div>
+  <h2>Interfaces between your own modules</h2>
+  <div class="goals"><div class="label">Goals</div><ul>
+    <li>Split an app into layers that depend in one direction only.</li>
+    <li>Define an interface as an abstract class and code against it.</li>
+  </ul></div>
+  <p>Apps stay easy to change when the parts talk through narrow, explicit interfaces. Ferry is organised in two layers:</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Layer</th><th>Contains</th><th>May include</th></tr></thead>
+    <tbody>
+      <tr><td><code>src/core</code></td><td>Protocol, HTTP server, discovery, send/receive logic</td><td>QtCore, QtNetwork. <strong>Never widgets.</strong></td></tr>
+      <tr><td><code>src/ui</code></td><td>Pages, dialogs, theme</td><td><code>core</code> and QtWidgets</td></tr>
+    </tbody>
+  </table></div>
+  <p>Because <code>core</code> never includes a widget, it can be tested without a window (Ferry's integration test does exactly that), and a different UI could reuse it unchanged.</p>
+
+  <h3>An interface is an abstract class</h3>
+  <p>Ferry's progress dialog shows both sending and receiving. Instead of knowing about two services, it depends on one small interface (<code>desktop/src/core/Transfer.h</code>):</p>
+  <div class="code"><span class="lang">cpp</span><pre><code class="language-cpp">class TransferSource {
+public:
+    virtual ~TransferSource() = default;                  // always virtual in an interface
+    virtual TransferSnapshot snapshot() const = 0;        // "= 0": must be implemented
+    virtual void cancelTransfer() = 0;
+};
+
+class SendService : public QObject, public TransferSource { /* implements both */ };
+class ReceiveService : public QObject, public TransferSource { /* … */ };
+
+TransferDialog::TransferDialog(TransferSource *source, bool incoming, QWidget *parent);   // takes either</code></pre></div>
+  <p>The same pattern lets you swap a real device for a fake one in tests. Ferry's UI snapshot tool feeds the dialog a <code>FakeTransfer</code> to render a mid-transfer screen without any network.</p>
+
+  <h3>Guidelines</h3>
+  <ul>
+    <li><strong>Headers are contracts.</strong> Keep them small; put includes and helpers in the <code>.cpp</code>. Anything in a header becomes something callers can depend on.</li>
+    <li><strong>Pass data, not objects</strong>, across layers: plain structs such as Ferry's <code>TransferSnapshot</code> or <code>DeviceInfo</code>.</li>
+    <li><strong>Report upward with signals, call downward with functions.</strong> The UI calls <code>send()</code>; the service emits <code>finished()</code>.</li>
+    <li><strong>One reason to change per class.</strong> If a class both parses HTTP and decides when to show a dialog, split it.</li>
+  </ul>
+  <div class="try"><div class="label">Try it</div><ol>
+    <li>Refactor your notes app: a <code>NoteStore</code> interface with <code>load()</code>/<code>save()</code>, implemented by <code>JsonNoteStore</code>. The window only knows the interface. Add an <code>InMemoryNoteStore</code> for tests.</li>
+  </ol></div>
+  <label class="done-toggle"><input type="checkbox" id="done-design"> Mark module done</label>
+</section>
+
+<!-- ============================================================ 09 -->
+<section class="module" id="native" data-module>
+  <div class="module-head"><span class="num">MODULE 09</span><span class="time">~1.5 weeks</span></div>
+  <h2>Interfacing with the OS, hardware and other languages</h2>
+  <div class="goals"><div class="label">Goals</div><ul>
+    <li>Call Win32, POSIX and macOS APIs from C++, and link the right system libraries.</li>
+    <li>Talk to a microcontroller over a USB serial port.</li>
+    <li>Expose C++ code through a C API so Python, Swift or C# can call it.</li>
+  </ul></div>
+
+  <h3>Platform-specific code</h3>
+  <p>Qt covers most needs, but sometimes you call the OS directly. Guard each platform's code and keep it in small, isolated functions behind a common header:</p>
+  <div class="code"><span class="lang">cpp · Power.cpp</span><pre><code class="language-cpp">#include "Power.h"            // declares: bool isOnBattery();
+
+#if defined(Q_OS_WIN)
+#include &lt;windows.h&gt;
+
+bool isOnBattery()
+{
+    SYSTEM_POWER_STATUS s;
+    return GetSystemPowerStatus(&amp;s) &amp;&amp; s.ACLineStatus == 0;   // kernel32: linked by default
+}
+
+#elif defined(Q_OS_MACOS)
+#include &lt;IOKit/ps/IOPowerSources.h&gt;    // CMake: target_link_libraries(app PRIVATE "-framework IOKit" "-framework CoreFoundation")
+
+bool isOnBattery()
+{
+    CFTypeRef info = IOPSCopyPowerSourcesInfo();
+    if (!info)
+        return false;
+    CFStringRef type = IOPSGetProvidingPowerSourceType(info);
+    const bool battery = type &amp;&amp; CFStringCompare(type, CFSTR(kIOPSBatteryPowerValue), 0) == kCFCompareEqualTo;
+    CFRelease(info);                       // C APIs: you release what you "Copy"
+    return battery;
+}
+
+#else
+bool isOnBattery() { return false; }
+#endif</code></pre></div>
+  <p>Ferry uses this exact technique to tell a MacBook from a desktop Mac (<code>desktop/src/core/AppSettings.cpp</code>). The Win32 docs on learn.microsoft.com list the header and library for every function. If the library isn't linked by default (for example <code>ws2_32</code>, <code>iphlpapi</code>), add it to <code>target_link_libraries</code>.</p>
+  <p>On macOS you can also mix Objective-C into C++ by naming a file <code>.mm</code> (Objective-C++). That gives you any Cocoa API:</p>
+  <div class="code"><span class="lang">objective-c++ · MacInfo.mm</span><pre><code class="language-objectivec">#import &lt;Foundation/Foundation.h&gt;
+#include "MacInfo.h"           // declares: std::string macOSVersion();
+
+std::string macOSVersion()
+{
+    @autoreleasepool {
+        return [[[NSProcessInfo processInfo] operatingSystemVersionString] UTF8String];
+    }
+}
+// CMake: project(App LANGUAGES CXX OBJCXX) and add MacInfo.mm to the target inside if(APPLE)</code></pre></div>
+
+  <h3>Hardware: a serial port to an Arduino</h3>
+  <p>An Arduino, ESP32 or PIC with a USB-UART shows up as a COM port (<code>COM3</code>) on Windows and <code>/dev/cu.usbmodem…</code> on macOS. Qt Serial Port makes it look like any other <code>QIODevice</code>. It's not installed on your PC yet: open <strong>Qt Maintenance Tool › Add or remove components › Qt 6.11.1 › Additional Libraries › Qt Serial Port</strong>.</p>
+  <div class="code"><span class="lang">cpp</span><pre><code class="language-cpp">#include &lt;QSerialPort&gt;           // CMake: find_package(Qt6 COMPONENTS SerialPort), link Qt6::SerialPort
+#include &lt;QSerialPortInfo&gt;
+
+for (const QSerialPortInfo &amp;info : QSerialPortInfo::availablePorts())
+    qDebug() &lt;&lt; info.portName() &lt;&lt; info.description() &lt;&lt; Qt::hex &lt;&lt; info.vendorIdentifier();
+
+auto *port = new QSerialPort("COM3", this);
+port-&gt;setBaudRate(QSerialPort::Baud115200);    // must match Serial.begin(115200) on the board
+if (!port-&gt;open(QIODevice::ReadWrite)) {
+    qWarning() &lt;&lt; port-&gt;errorString();          // e.g. "Access is denied": Arduino IDE's monitor has it open
+    return;
+}
+
+connect(port, &amp;QSerialPort::readyRead, this, [this, port] {
+    m_buffer += port-&gt;readAll();                  // bytes arrive in arbitrary pieces...
+    qsizetype nl;
+    while ((nl = m_buffer.indexOf('\n')) &gt;= 0) {  // ...so split into lines yourself
+        const QByteArray line = m_buffer.left(nl).trimmed();
+        m_buffer.remove(0, nl + 1);
+        handleLine(QString::fromUtf8(line));      // e.g. "T=23.5"
+    }
+});
+port-&gt;write("LED 1\n");</code></pre></div>
+  <p>The matching Arduino sketch prints <code>Serial.println(value)</code> and reads commands with <code>Serial.readStringUntil('\n')</code>. Combine this with <strong>Qt Charts</strong> (installed) to plot sensor data live: a good project for an electronics engineer.</p>
+
+  <h3>Being called from other languages: the C ABI</h3>
+  <p>Almost every language can call C functions in a DLL. None can reliably call C++ directly, because of name mangling, classes and exceptions. So you wrap your C++ library in a thin C layer:</p>
+  <div class="code"><span class="lang">cpp · counter_c.h</span><pre><code class="language-cpp">#pragma once
+
+#if defined(_WIN32)
+#  define COUNTER_API __declspec(dllexport)
+#else
+#  define COUNTER_API __attribute__((visibility("default")))
+#endif
+
+#ifdef __cplusplus
+extern "C" {                       // no name mangling: the symbol is exactly "counter_new"
+#endif
+
+typedef struct Counter Counter;    // opaque handle: callers never see inside
+
+COUNTER_API Counter *counter_new(void);
+COUNTER_API void counter_add(Counter *c, int amount);
+COUNTER_API int counter_value(const Counter *c);
+COUNTER_API void counter_free(Counter *c);
+
+#ifdef __cplusplus
+}
+#endif</code></pre></div>
+  <div class="code"><span class="lang">cpp · counter_c.cpp</span><pre><code class="language-cpp">#include "counter_c.h"
+#include &lt;vector&gt;
+
+struct Counter {                    // the real C++ lives here
+    std::vector&lt;int&gt; history;
+    int value = 0;
+};
+
+Counter *counter_new(void) { return new Counter; }
+void counter_add(Counter *c, int amount) { c-&gt;value += amount; c-&gt;history.push_back(amount); }
+int counter_value(const Counter *c) { return c-&gt;value; }
+void counter_free(Counter *c) { delete c; }
+// Never let a C++ exception cross this boundary: catch inside and return an error code.</code></pre></div>
+  <div class="code"><span class="lang">cmake</span><pre><code class="language-cmake">add_library(counter SHARED counter_c.cpp)    # -&gt; counter.dll / libcounter.dylib</code></pre></div>
+  <div class="code"><span class="lang">python · use_counter.py</span><pre><code class="language-python">import ctypes
+
+lib = ctypes.CDLL("./build/libcounter.dll")   # MinGW names it libcounter.dll; macOS: libcounter.dylib
+lib.counter_new.restype = ctypes.c_void_p
+lib.counter_add.argtypes = [ctypes.c_void_p, ctypes.c_int]
+lib.counter_value.argtypes = [ctypes.c_void_p]
+lib.counter_free.argtypes = [ctypes.c_void_p]
+
+c = lib.counter_new()
+lib.counter_add(c, 40)
+lib.counter_add(c, 2)
+print(lib.counter_value(c))   # 42
+lib.counter_free(c)</code></pre></div>
+  <p>Swift imports the same header through a bridging header or module map, and since Swift 5.9 can even call many C++ APIs directly with C++ interoperability turned on. C# uses <code>[DllImport]</code>. The C header is the universal adapter. Check the exports with <code>nm -D</code> (Linux), <code>objdump -p libcounter.dll</code> (MinGW) or <code>nm -gU</code> (macOS).</p>
+
+  <div class="try"><div class="label">Try it</div><ol>
+    <li>Write <code>isOnBattery()</code> and show the result in a window's status bar, refreshing every 10 seconds.</li>
+    <li>Install Qt Serial Port. Flash an Arduino with a sketch that prints an analog reading every 100 ms, and build a Qt window that plots it with Qt Charts and has a button to toggle the onboard LED.</li>
+    <li>Build the counter DLL and drive it from Python. Then remove <code>extern "C"</code>, rebuild, and read Python's error.</li>
+  </ol></div>
+  <details class="check"><summary>Your serial app works, but sometimes reads a half line like <code>T=2</code>. What's wrong?</summary>
+    <div class="answer"><p>Serial data, like TCP, arrives in arbitrary chunks. You parsed each <code>readyRead</code> chunk as a complete message. Accumulate into a buffer and only process complete lines, as in the example.</p></div></details>
+  <label class="done-toggle"><input type="checkbox" id="done-native"> Mark module done</label>
+</section>
+
+<!-- ============================================================ 10 -->
+<section class="module" id="debug" data-module>
+  <div class="module-head"><span class="num">MODULE 10</span><span class="time">~1 week</span></div>
+  <h2>Debugging and testing</h2>
+  <div class="goals"><div class="label">Goals</div><ul>
+    <li>Use breakpoints, stepping, the call stack and watches.</li>
+    <li>Write automated tests with QtTest and run them with CTest.</li>
+  </ul></div>
+
+  <h3>The debugger</h3>
+  <p>Build in Debug mode (<code>-DCMAKE_BUILD_TYPE=Debug</code>, or the Debug kit in Qt Creator) and press <kbd>F5</kbd>. Click left of a line number for a breakpoint; <kbd>F10</kbd> steps over, <kbd>F11</kbd> steps into, <kbd>Shift</kbd>+<kbd>F11</kbd> steps out. When a program crashes under the debugger, it stops on the crashing line and the <strong>call stack</strong> shows how you got there. That's the single most useful view.</p>
+  <p>The same from a terminal with gdb (on macOS, <code>lldb</code> uses nearly identical commands):</p>
+  <div class="code"><span class="lang">text · gdb session</span><pre><code class="language-plaintext">gdb .\build\notes.exe
+(gdb) break NotePage.cpp:42     # stop at a line
+(gdb) run
+(gdb) bt                        # backtrace: the call stack
+(gdb) print m_notes.size()      # inspect a value
+(gdb) next / step / continue</code></pre></div>
+  <p>Cheap but effective: <code>qDebug() &lt;&lt; "state" &lt;&lt; value;</code> prints any Qt type readably. On macOS and Linux, also try building with <code>-fsanitize=address,undefined</code>: the program then stops at the exact line of a memory bug instead of crashing somewhere later. (MinGW doesn't support sanitizers; Clang on your Mac does.)</p>
+
+  <h3>Automated tests with QtTest</h3>
+  <div class="code"><span class="lang">cpp · tests/test_protocol.cpp</span><pre><code class="language-cpp">#include &lt;QtTest&gt;
+#include "core/Protocol.h"
+
+class TestProtocol : public QObject {
+    Q_OBJECT
+private slots:                            // each private slot is one test
+    void stripsPathTraversal()
+    {
+        QCOMPARE(ferry::sanitizeRelativePath("../../evil.txt"), QString("evil.txt"));
+        QCOMPARE(ferry::sanitizeRelativePath("Album/../x.jpg"), QString("Album/x.jpg"));
+    }
+    void formatsSizes()
+    {
+        QCOMPARE(ferry::formatBytes(512), QString("512 B"));
+        QVERIFY(ferry::formatBytes(5 * 1024 * 1024).endsWith("MB"));
+    }
+};
+
+QTEST_MAIN(TestProtocol)
+#include "test_protocol.moc"               // moc output for a class defined in a .cpp</code></pre></div>
+  <div class="code"><span class="lang">cmake</span><pre><code class="language-cmake">find_package(Qt6 REQUIRED COMPONENTS Test)
+enable_testing()
+qt_add_executable(test_protocol tests/test_protocol.cpp)
+target_link_libraries(test_protocol PRIVATE ferry_lib Qt6::Test)
+add_test(NAME protocol COMMAND test_protocol)
+# then:  ctest --test-dir build --output-on-failure</code></pre></div>
+  <p>Test the <code>core</code> layer heavily: it's where logic lives, and it needs no window. Ferry's <code>tests/integration_test.cpp</code> goes further and runs a real sender against a real receiver over loopback, including deliberately malicious requests.</p>
+
+  <div class="try"><div class="label">Try it</div><ol>
+    <li>Add the test above to a copy of Ferry's desktop project and make it pass. Then add a failing case on purpose and read QtTest's output.</li>
+    <li>Plant a bug in your notes app (an off-by-one in a loop), make it crash, and find it using only the debugger's call stack.</li>
+  </ol></div>
+  <label class="done-toggle"><input type="checkbox" id="done-debug"> Mark module done</label>
+</section>
+
+<!-- ============================================================ 11 -->
+<section class="module" id="ship" data-module>
+  <div class="module-head"><span class="num">MODULE 11</span><span class="time">~4 hours</span></div>
+  <h2>Shipping an app</h2>
+  <div class="goals"><div class="label">Goals</div><ul>
+    <li>Turn a build into a folder or bundle that runs on a computer without Qt installed.</li>
+    <li>Give the app an icon and version info, and understand signing and Qt's licence.</li>
+  </ul></div>
+
+  <h3>Deploying the Qt libraries</h3>
+  <p>Your <code>.exe</code> needs Qt's DLLs, the right compiler runtime DLLs, and plugins (<code>platforms/qwindows.dll</code> at minimum, plus image formats, TLS and so on). Qt's deploy tools copy exactly what's needed:</p>
+  <div class="code"><span class="lang">powershell</span><pre><code class="language-powershell"># Manual, one-off
+windeployqt --release .\build\Notes.exe
+
+# Or built into CMake, as Ferry does: cmake --install runs windeployqt / macdeployqt
+cmake -S . -B build-rel -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=C:/Qt/6.11.1/mingw_64
+cmake --build build-rel
+cmake --install build-rel --prefix dist</code></pre></div>
+  <div class="code"><span class="lang">cmake</span><pre><code class="language-cmake">include(GNUInstallDirs)
+install(TARGETS notes BUNDLE DESTINATION . RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+qt_generate_deploy_app_script(TARGET notes OUTPUT_SCRIPT deploy_script NO_UNSUPPORTED_PLATFORM_ERROR)
+install(SCRIPT ${deploy_script})</code></pre></div>
+  <p>Test the result on a machine (or a clean Windows Sandbox) that has no Qt installed. That's the only real proof.</p>
+
+  <h3>Icons and version info</h3>
+  <ul>
+    <li><strong>Windows:</strong> an <code>.rc</code> file with <code>IDI_ICON1 ICON "app.ico"</code> and a <code>VERSIONINFO</code> block, added to the target. See <code>ferry/desktop/platform/windows/ferry.rc</code>.</li>
+    <li><strong>macOS:</strong> an <code>Info.plist</code> template plus an <code>.icns</code> file copied into <code>Resources</code>. Since macOS 15, apps that use the local network need an <code>NSLocalNetworkUsageDescription</code>. See <code>ferry/desktop/platform/macos</code>.</li>
+    <li><code>ferry/tools/make_icons.py</code> generates <code>.ico</code>, <code>.icns</code> and iOS icons from code. Adapt it for your own apps.</li>
+  </ul>
+
+  <h3>Installers and signing</h3>
+  <ul>
+    <li><strong>Windows installer:</strong> <a href="https://jrsoftware.org/isinfo.php" target="_blank" rel="noopener">Inno Setup</a> turns the <code>dist</code> folder into one <code>setup.exe</code> with Start-menu shortcuts. Unsigned apps trigger a SmartScreen warning; a code-signing certificate removes it.</li>
+    <li><strong>macOS:</strong> to run without Gatekeeper warnings on other Macs, sign with a Developer ID certificate (Apple Developer Program) and notarise:</li>
+  </ul>
+  <div class="code"><span class="lang">bash · macOS</span><pre><code class="language-bash">macdeployqt dist/Notes.app -sign-for-notarization="Developer ID Application: Your Name (TEAMID)"
+ditto -c -k --keepParent dist/Notes.app Notes.zip
+xcrun notarytool submit Notes.zip --apple-id you@example.com --team-id TEAMID --wait
+xcrun stapler staple dist/Notes.app</code></pre></div>
+
+  <div class="callout"><div class="label">Qt's licence</div>
+    <p>The open-source Qt you installed is mostly LGPLv3. You may ship closed-source apps if you link Qt <em>dynamically</em> (the default), let users replace the Qt libraries, include the licence texts, and say you use Qt. Some modules (e.g. Qt Charts) are GPL-only in the open-source edition, which requires your app to be GPL too, or a commercial licence. Check each module's licence before shipping commercially.</p></div>
+
+  <div class="try"><div class="label">Try it</div><ol>
+    <li>Deploy your File Fingerprint app with <code>cmake --install</code>, zip <code>dist</code>, and run it on a friend's PC or in Windows Sandbox.</li>
+    <li>Give it an icon and version info, then make an Inno Setup installer.</li>
+  </ol></div>
+  <label class="done-toggle"><input type="checkbox" id="done-ship"> Mark module done</label>
+</section>
+
+<!-- ============================================================ 12 -->
+<section class="module" id="projects" data-module>
+  <div class="module-head"><span class="num">MODULE 12</span><span class="time">ongoing</span></div>
+  <h2>Projects to build</h2>
+  <p>Each project combines several modules. Finish one before starting the next; each is roughly a weekend. The last one is a smaller Ferry: when you can build it from an empty folder, you can build apps like it on your own.</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Project</th><th>You'll practise</th><th>Done when</th></tr></thead>
+    <tbody>
+      <tr><td><strong>1. Notes</strong></td><td>Widgets, layouts, JSON, QSettings, CMake library + app</td><td>Notes survive a restart; window size and position are remembered</td></tr>
+      <tr><td><strong>2. File Fingerprint</strong></td><td>Drag &amp; drop, worker threads, progress, deployment</td><td>Hashes a 4 GB file with a responsive window and a working Cancel; runs on a PC without Qt</td></tr>
+      <tr><td><strong>3. Bench Monitor</strong></td><td>Qt Serial Port, Qt Charts, custom painting, the C ABI</td><td>Live plot of an Arduino sensor, LED control, CSV export; the parsing code also callable from Python</td></tr>
+      <tr><td><strong>4. LAN Chat</strong></td><td>UDP multicast discovery, TCP framing, signals across layers</td><td>Two PCs find each other without typing an IP and chat; closing one updates the other's list</td></tr>
+      <tr><td><strong>5. Mini-Ferry</strong></td><td>Everything: HTTP over TCP, file streaming, accept/decline UI, tests</td><td>Sends a folder between two PCs, survives a cancel on either side, and has an integration test</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Reading Ferry's source, in order</h3>
+  <ol>
+    <li><code>desktop/src/core/Protocol.h/.cpp</code>: plain data structs and helpers. Modules 02 and 06.</li>
+    <li><code>desktop/src/core/HttpServer.cpp</code>: a state machine over a TCP socket. Module 06.</li>
+    <li><code>desktop/src/core/Discovery.cpp</code>: UDP multicast plus a parallel HTTP scan. Module 06.</li>
+    <li><code>desktop/src/core/ReceiveService.cpp</code> and <code>SendService.cpp</code>: protocol logic. Modules 04 and 08.</li>
+    <li><code>desktop/src/ui/Theme.cpp</code>, <code>Widgets.cpp</code>, <code>SendPage.cpp</code>: styling, custom painting, drag &amp; drop. Module 05.</li>
+    <li><code>desktop/tests/integration_test.cpp</code>: how to test networked code. Module 10.</li>
+  </ol>
+
+  <h3>References worth bookmarking</h3>
+  <ul>
+    <li><a href="https://en.cppreference.com" target="_blank" rel="noopener">cppreference.com</a>: the language and standard library reference.</li>
+    <li><a href="https://www.learncpp.com" target="_blank" rel="noopener">learncpp.com</a>: the best free C++ course, beginner to intermediate.</li>
+    <li><a href="https://doc.qt.io/qt-6/" target="_blank" rel="noopener">doc.qt.io/qt-6</a>: every class page has examples; also press <kbd>F1</kbd> on a Qt class in Qt Creator.</li>
+    <li><a href="https://cmake.org/cmake/help/latest/" target="_blank" rel="noopener">CMake documentation</a>, and the free online book <em>An Introduction to Modern CMake</em>.</li>
+    <li><em>A Tour of C++</em> (Bjarne Stroustrup, 3rd ed.): a short, authoritative overview of modern C++.</li>
+    <li><a href="https://isocpp.github.io/CppCoreGuidelines/" target="_blank" rel="noopener">C++ Core Guidelines</a>: dip in when you wonder “what's the right way to…”.</li>
+  </ul>
+  <label class="done-toggle"><input type="checkbox" id="done-projects"> Mark module done</label>
+</section>
+
+<!-- ============================================================ A -->
+<section class="module" id="errors">
+  <div class="module-head"><span class="num">APPENDIX A</span><span class="time">reference</span></div>
+  <h2>Error decoder</h2>
+  <p>First decide <em>who</em> is complaining: messages naming a <code>.cpp</code> file and line come from the compiler; messages mentioning “undefined reference”, “ld” or “collect2” come from the linker; messages from CMake start with <code>CMake Error</code>; a dialog when you double-click the <code>.exe</code> is the runtime loader.</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Message (abridged)</th><th>Stage</th><th>Usual cause and fix</th></tr></thead>
+    <tbody>
+      <tr><td><code>fatal error: QPushButton: No such file or directory</code></td><td>Compiler</td><td>Missing include path: link the Qt module (<code>Qt6::Widgets</code>) in CMake, which also adds its headers.</td></tr>
+      <tr><td><code>'QLabel' was not declared in this scope</code> / <code>incomplete type</code></td><td>Compiler</td><td>Header not included, only forward-declared. Add <code>#include &lt;QLabel&gt;</code> in the <code>.cpp</code>.</td></tr>
+      <tr><td><code>undefined reference to `Foo::bar()'</code></td><td>Linker</td><td>Definition not compiled or not linked: add the <code>.cpp</code> to the target or the library to <code>target_link_libraries</code>.</td></tr>
+      <tr><td><code>undefined reference to `vtable for Foo'</code></td><td>Linker</td><td>moc didn't run for a <code>Q_OBJECT</code> class, or a virtual function is declared but never defined. Re-run CMake; check the header is in the target.</td></tr>
+      <tr><td><code>multiple definition of `helper()'</code></td><td>Linker</td><td>A function defined in a header included by several <code>.cpp</code> files. Make it <code>inline</code> or move it to a <code>.cpp</code>.</td></tr>
+      <tr><td><code>Could not find a package configuration file provided by "Qt6"</code></td><td>CMake</td><td>Set <code>-DCMAKE_PREFIX_PATH=C:/Qt/6.11.1/mingw_64</code> (or pick a Qt kit in Qt Creator).</td></tr>
+      <tr><td>“Qt6Core.dll was not found” when double-clicking</td><td>Runtime</td><td>Qt isn't deployed next to the .exe. Run <code>windeployqt</code> or <code>cmake --install</code> (Module 11).</td></tr>
+      <tr><td>“The procedure entry point … could not be located”</td><td>Runtime</td><td>A DLL from a different compiler build was found first, often the MSYS2 vs Qt MinGW mix-up from Module 00. Deploy DLLs next to the exe; fix PATH order.</td></tr>
+      <tr><td>“This application failed to start because no Qt platform plugin could be initialized”</td><td>Runtime</td><td><code>platforms/qwindows.dll</code> missing. Deploy with windeployqt.</td></tr>
+      <tr><td><code>QObject::connect: No such signal</code> (at runtime)</td><td>Runtime</td><td>Old string-based <code>SIGNAL()</code>/<code>SLOT()</code> syntax with a typo. Use the function-pointer syntax: errors then appear at compile time.</td></tr>
+      <tr><td><code>QObject: Cannot create children for a parent that is in a different thread</code></td><td>Runtime</td><td>Creating objects inside a worker with a GUI-thread parent. Create them in the worker without a parent, or talk via signals.</td></tr>
+      <tr><td>Window “Not responding”</td><td>Runtime</td><td>Blocking work on the GUI thread. Move it to a worker (Module 07).</td></tr>
+    </tbody>
+  </table></div>
+  <p class="footer-note">Written for your setup: Windows 11 with Qt 6.11.1 MinGW, plus a Mac with Homebrew. Your progress ticks are stored in this browser only.</p>
+</section>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/cmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/powershell.min.js"></script>
+<script>
+(function () {
+  // Syntax highlighting (the page reads fine without it if the CDN is unreachable).
+  if (window.hljs) {
+    document.querySelectorAll('pre code').forEach(function (el) {
+      try { window.hljs.highlightElement(el); } catch (e) {}
+    });
+  }
+
+  // Copy buttons on every code block.
+  document.querySelectorAll('.code').forEach(function (block) {
+    var pre = block.querySelector('pre');
+    var button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'copy';
+    button.textContent = 'Copy';
+    button.addEventListener('click', function () {
+      var text = pre.innerText;
+      var done = function () { button.textContent = 'Copied'; setTimeout(function () { button.textContent = 'Copy'; }, 1400); };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, function () { selectText(pre); });
+      } else {
+        selectText(pre);
+      }
+    });
+    block.appendChild(button);
+  });
+  function selectText(node) {
+    var range = document.createRange();
+    range.selectNodeContents(node);
+    var sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+
+  // Progress (per-browser only).
+  var KEY = 'cls-progress-v1';
+  var state = {};
+  try { state = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { state = {}; }
+  var boxes = Array.prototype.slice.call(document.querySelectorAll('.done-toggle input'));
+  function render() {
+    var done = 0;
+    boxes.forEach(function (box) {
+      var id = box.id.replace('done-', '');
+      box.checked = !!state[id];
+      if (state[id]) done++;
+      var link = document.querySelector('#toc a[href="#' + id + '"]');
+      if (link) link.classList.toggle('done', !!state[id]);
+    });
+    document.getElementById('progressCount').textContent = done + ' of ' + boxes.length + ' modules done';
+    document.getElementById('progressBar').style.width = (100 * done / boxes.length) + '%';
+  }
+  boxes.forEach(function (box) {
+    box.addEventListener('change', function () {
+      state[box.id.replace('done-', '')] = box.checked;
+      try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+      render();
+    });
+  });
+  render();
+
+  // Highlight the module currently on screen in the index.
+  var links = {};
+  document.querySelectorAll('#toc a').forEach(function (a) { links[a.getAttribute('href').slice(1)] = a; });
+  if ('IntersectionObserver' in window) {
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          Object.keys(links).forEach(function (id) { links[id].classList.toggle('active', id === entry.target.id); });
+        }
+      });
+    }, { rootMargin: '-20% 0px -70% 0px' });
+    document.querySelectorAll('section.module').forEach(function (s) { observer.observe(s); });
+  }
+
+  // Theme switch: Auto follows the system.
+  var THEME_KEY = 'cls-theme';
+  var buttons = document.querySelectorAll('[data-theme-set]');
+  function applyTheme(mode) {
+    if (mode === 'light' || mode === 'dark') document.documentElement.setAttribute('data-theme', mode);
+    else document.documentElement.removeAttribute('data-theme');
+    buttons.forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-theme-set') === mode)); });
+  }
+  var saved = 'system';
+  try { saved = localStorage.getItem(THEME_KEY) || 'system'; } catch (e) {}
+  applyTheme(saved);
+  buttons.forEach(function (b) {
+    b.addEventListener('click', function () {
+      var mode = b.getAttribute('data-theme-set');
+      try { localStorage.setItem(THEME_KEY, mode); } catch (e) {}
+      applyTheme(mode);
+    });
+  });
+})();
+</script>
